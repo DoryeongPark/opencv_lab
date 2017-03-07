@@ -8,7 +8,6 @@
 #include<opencv2\core.hpp>
 #include<opencv2\imgproc.hpp>
 #include<opencv2\highgui.hpp>
-#include<opencv2\calib3d.hpp>
 #include<opencv2\xfeatures2d.hpp>
 #include<opencv2\ml.hpp>
 
@@ -95,7 +94,7 @@ public:
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void expand_rect(Rect& rect, const int& pixel) noexcept;
-//void adaptive_fast()
+void display_rects(Mat& cframe, Mat& binary, vector<Rect>& final_rects) noexcept;
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
@@ -118,13 +117,10 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 		drag = false;
 		cropper->determine_second_coordinate(x, y);
 		Mat cropped_mat = cropper->get_matrix();
-		double cropped_mat_rows = cropped_mat.rows;
 		resize(cropped_mat, cropped_mat, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_CUBIC);
 		cvtColor(cropped_mat, cropped_mat, CV_BGR2GRAY);
-		cout.precision(2);
-		cout << (double)(cropped_mat_rows / (double)DATA_HEIGHT) << endl;
-		//detector->detect(cropped_mat, keypoints);
-		FAST(cropped_mat, keypoints, 8);
+		detector->detect(cropped_mat, keypoints);
+		extractor->compute(cropped_mat, keypoints, descriptors);
 		drawKeypoints(cropped_mat, keypoints, cropped_mat);
 
 		imshow("Data", cropped_mat);
@@ -153,6 +149,20 @@ void expand_rect(Rect& rect, const int& pixel) noexcept {
 	rect.y = y1;
 	rect.width = x2 - x1;
 	rect.height = y2 - y1;
+}
+
+void display_rects(Mat& cframe, Mat& binary, vector<Rect>& final_rects) noexcept {
+	for (auto iter = final_rects.begin(); iter != final_rects.end();) {
+		Mat cframe_clone = cframe.clone();
+		rectangle(cframe_clone, *iter, Scalar(0, 0, 255), 0.5);
+		Mat roi = binary(*iter);
+		resize(roi, roi, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_AREA);
+		imshow("Input", cframe_clone);
+		imshow("Binary ROI", roi);
+		++iter;
+		char ch = waitKey(10);
+		while ((ch = waitKey(10)) != 32 && ch != 27);
+	}
 }
 
 
@@ -251,20 +261,20 @@ init:
 			bounded_rects[i] = boundingRect(Mat{ contours_polygon[i] });
 		}
 
-	
-
-		for (Rect& final_rect : bounded_rects) {
+		/*for (Rect& final_rect : bounded_rects) {
 			expand_rect(final_rect, 4);
-		}
+		}*/
 
+		
 		imshow("Input", cframe);
 		imshow("Background", background);
-		
+		imshow("Binary", binary);
+
 		char ch = waitKey(10);
 
 		//Space key
 		if (ch == 32) {
-			//Save all objects detected as file
+			display_rects(cframe, binary, bounded_rects);
 			while ((ch = waitKey(10)) != 32 && ch != 27);
 			if (ch == 27) break;
 		}
@@ -278,5 +288,6 @@ init:
 	}
 
 	destroyAllWindows();
+	imwrite("Background.jpg", accumulator);
 }
 

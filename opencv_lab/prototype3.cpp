@@ -94,7 +94,7 @@ public:
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void expand_rect(Rect& rect, const int& pixel) noexcept;
-void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
+void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
 void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
 void train(Mat& data);
 

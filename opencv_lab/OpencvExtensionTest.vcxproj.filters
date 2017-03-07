@@ -21,5 +21,11 @@
     <ClCompile Include="train.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+    <ClCompile Include="detector.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="binary.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
