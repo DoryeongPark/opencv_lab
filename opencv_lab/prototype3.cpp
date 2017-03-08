@@ -26,7 +26,7 @@ using namespace xfeatures2d;
 using namespace ml;
 
 //ORB Detector & SURF extractor
-Ptr<ORB> detector = ORB::create(15, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
+Ptr<ORB> detector = ORB::create(30, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 Mat descriptors;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = SVM::create();
@@ -95,8 +95,7 @@ public:
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
-void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
-void train(Mat& data);
+void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 	
@@ -235,17 +234,24 @@ void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_re
 		addWeighted(background_roi, 0, object_cframe, 1, 0.0, result(roi));
 
 		//Check with classifier
-		keypoints.clear();
+		keypoints.clear(); 
 		detector->detect(result, keypoints);
 		extractor->compute(result, keypoints, descriptors);
 		descriptors = descriptors.reshape(1, 1);
+
+		imshow("Check", result);
+		waitKey(20);
 		
 		if (descriptors.cols != classifier->getVarCount()) {
+			//Log
+			cout << classifier->getVarCount() << endl;
+			cout << descriptors.cols << endl;
+			//Log
 			iter = final_rects.erase(iter);
 			continue;
 		}
 
-		float is_matching = classifier->predict(descriptors.reshape(1,1));
+		float is_matching = classifier->predict(descriptors);
 
 		Mat result_clone = result.clone();
 
@@ -427,7 +433,7 @@ init:
 		//Space key
 		if(ch == 32){                
 			//Save all objects detected as file
-			save_objects(cframe, cframe_gray, binary, bounded_rects);
+			//save_objects(cframe, cframe_gray, binary, bounded_rects);
 			classify(cframe, cframe_gray, binary, bounded_rects);
 			while ((ch = waitKey(10)) != 32 && ch != 27);
 			if (ch == 27) break;

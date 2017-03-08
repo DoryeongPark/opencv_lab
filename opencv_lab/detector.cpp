@@ -27,7 +27,7 @@ using namespace xfeatures2d;
 using namespace ml;
 
 //ORB Detector & SURF extractor
-Ptr<ORB> detector = ORB::create(15, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
+Ptr<ORB> detector = ORB::create(20, 1.2f, 8, 15, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 Mat descriptors;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = SVM::create();

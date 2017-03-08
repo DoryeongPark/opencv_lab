@@ -11,7 +11,6 @@
 #include<opencv2\xfeatures2d.hpp>
 #include<opencv2\ml.hpp>
 
-static int matarial_count = 850;
 static bool drag = false;
 
 constexpr int WIDTH = 320;
@@ -94,7 +93,8 @@ public:
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void expand_rect(Rect& rect, const int& pixel) noexcept;
-void display_rects(Mat& cframe, Mat& binary, vector<Rect>& final_rects) noexcept;
+void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
+void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept;
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
@@ -151,8 +151,8 @@ void expand_rect(Rect& rect, const int& pixel) noexcept {
 	rect.height = y2 - y1;
 }
 
-void display_rects(Mat& cframe, Mat& binary, vector<Rect>& final_rects) noexcept {
-	for (auto iter = final_rects.begin(); iter != final_rects.end();) {
+void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept {
+	for (auto iter = rects.begin(); iter != rects.end();) {
 		Mat cframe_clone = cframe.clone();
 		rectangle(cframe_clone, *iter, Scalar(0, 0, 255), 0.5);
 		Mat roi = binary(*iter);
@@ -165,6 +165,54 @@ void display_rects(Mat& cframe, Mat& binary, vector<Rect>& final_rects) noexcept
 	}
 }
 
+void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
+	for (auto iter = rects.begin(); iter != rects.end();) {
+		Mat roi = cframe_gray(*iter);
+		
+		Mat histogram;
+		const int* channel_numbers = { 0 };
+		float channel_range[] = { 0, 256 };
+		const float* channel_ranges = channel_range;
+		int hist_size = 256;
+
+		//Calculate TOP 3 Pixel Value 
+
+		calcHist(&roi, 1, channel_numbers, Mat(), histogram, 1, &hist_size, &channel_ranges);
+
+		float rank1_cnt = 0.0f, rank2_cnt = 0.0f, rank3_cnt = 0.0f;
+		int rank1_px = -1, rank2_px = -1, rank3_px = -1;
+		
+		for (int i = 0; i < histogram.rows; ++i) {
+			float current_cnt = histogram.at<float>(i, 0);
+			if (current_cnt > rank1_cnt) {
+				rank3_px = rank2_px; rank3_cnt = rank2_cnt;
+				rank2_px = rank1_px; rank2_cnt = rank1_cnt;
+				rank1_px = i; rank1_cnt = current_cnt;
+			}
+			else if (current_cnt <= rank1_cnt && current_cnt > rank2_cnt) {
+				rank3_px = rank2_px; rank3_cnt = rank2_cnt;
+				rank2_px = i; rank2_cnt = current_cnt;
+			}
+			else if (current_cnt <= rank2_cnt && current_cnt > rank3_cnt) {
+				rank3_px = i; rank3_cnt = current_cnt;
+			}
+		}
+
+		
+		int left = 0;
+		int top = 0;
+		int width = roi.cols;
+		int height = roi.rows;
+
+		//4-direction matrix 
+		Mat left_mat = roi(Rect(left, top, 1, height));
+		Mat right_mat = roi(Rect(width - 2, 0, 1, height));
+		Mat top_mat = roi(Rect(left, top, width, 1));
+		Mat bot_mat = roi(Rect(0, height - 2, width, 1));
+
+		++iter;
+	}
+}
 
 int main() {
 
@@ -199,7 +247,7 @@ init:
 	Mat background{ 240, 320, CV_8UC1 };
 	Mat binary;
 	Mat noise_remover = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
-	Mat expander = getStructuringElement(MORPH_ELLIPSE, Size{ 5, 5 }, Point{ 2, 2 });
+	Mat expander = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
 	deque<Point> point_queue;
 
 	vector<vector<Point>> contours;
@@ -236,13 +284,13 @@ init:
 		cvtColor(cframe, cframe_gray, COLOR_BGR2GRAY);
 
 		absdiff(background, cframe_gray, binary);
-		threshold(binary, binary, 22, 255, THRESH_BINARY);
+		threshold(binary, binary, 25, 255, THRESH_BINARY);
+
+		morphologyEx(binary, binary, MORPH_ERODE, noise_remover);
+		morphologyEx(binary, binary, MORPH_DILATE, expander);
 
 		accumulateWeighted(cframe_gray, accumulator, 0.001, mask);
 		convertScaleAbs(accumulator, background);
-
-		morphologyEx(binary, binary, MORPH_OPEN, noise_remover);
-		morphologyEx(binary, binary, MORPH_CLOSE, expander);
 
 		findContours(
 			binary, contours, hierarchy,
@@ -274,7 +322,8 @@ init:
 
 		//Space key
 		if (ch == 32) {
-			display_rects(cframe, binary, bounded_rects);
+			//display_rects(cframe, binary, bounded_rects);
+			expand_object_roi(cframe_gray, bounded_rects);
 			while ((ch = waitKey(10)) != 32 && ch != 27);
 			if (ch == 27) break;
 		}

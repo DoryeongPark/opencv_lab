@@ -24,7 +24,7 @@ void main() {
 	vector<KeyPoint> keypoints1;
 	
 	//ORB Detector
-	Ptr<ORB> detector = ORB::create(30, 1.2f, 8, 15, 0, 2, ORB::HARRIS_SCORE, 31, 20);
+	Ptr<ORB> detector = ORB::create(20, 1.2f, 8, 15, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 
 	Mat descriptors1, descriptors2;
 
