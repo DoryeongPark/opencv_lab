@@ -4,6 +4,8 @@
 #include<windows.h>
 #include<fstream>
 #include<istream>
+#include<algorithm>
+#include<functional>
 
 #include<opencv2\core.hpp>
 #include<opencv2\imgproc.hpp>
@@ -119,7 +121,8 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 		Mat cropped_mat = cropper->get_matrix();
 		resize(cropped_mat, cropped_mat, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_CUBIC);
 		cvtColor(cropped_mat, cropped_mat, CV_BGR2GRAY);
-		detector->detect(cropped_mat, keypoints);
+		//detector->detect(cropped_mat, keypoints);
+		FAST(cropped_mat, keypoints, 3);
 		extractor->compute(cropped_mat, keypoints, descriptors);
 		drawKeypoints(cropped_mat, keypoints, cropped_mat);
 
@@ -166,8 +169,19 @@ void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept {
 }
 
 void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
+	
 	for (auto iter = rects.begin(); iter != rects.end();) {
+		
+		if (iter->width <= 1 || iter->height <= 1) {
+			++iter;
+			continue;
+		}
+
 		Mat roi = cframe_gray(*iter);
+		int roi_x = iter->x;
+		int roi_y = iter->y;
+		int roi_width = iter->width;
+		int roi_height = iter->height;
 		
 		Mat histogram;
 		const int* channel_numbers = { 0 };
@@ -175,40 +189,60 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		const float* channel_ranges = channel_range;
 		int hist_size = 256;
 
-		//Calculate TOP 3 Pixel Value 
-
+		//Calculate TOP 1 Pixel Value 
 		calcHist(&roi, 1, channel_numbers, Mat(), histogram, 1, &hist_size, &channel_ranges);
 
-		float rank1_cnt = 0.0f, rank2_cnt = 0.0f, rank3_cnt = 0.0f;
-		int rank1_px = -1, rank2_px = -1, rank3_px = -1;
-		
+		int rank1_px = 0;
+		int rank1_cnt = -1;
+
 		for (int i = 0; i < histogram.rows; ++i) {
 			float current_cnt = histogram.at<float>(i, 0);
 			if (current_cnt > rank1_cnt) {
-				rank3_px = rank2_px; rank3_cnt = rank2_cnt;
-				rank2_px = rank1_px; rank2_cnt = rank1_cnt;
-				rank1_px = i; rank1_cnt = current_cnt;
-			}
-			else if (current_cnt <= rank1_cnt && current_cnt > rank2_cnt) {
-				rank3_px = rank2_px; rank3_cnt = rank2_cnt;
-				rank2_px = i; rank2_cnt = current_cnt;
-			}
-			else if (current_cnt <= rank2_cnt && current_cnt > rank3_cnt) {
-				rank3_px = i; rank3_cnt = current_cnt;
+				rank1_px = i;
+				rank1_cnt = current_cnt;
 			}
 		}
 
-		
-		int left = 0;
-		int top = 0;
-		int width = roi.cols;
-		int height = roi.rows;
+		int scope = 10;
 
-		//4-direction matrix 
-		Mat left_mat = roi(Rect(left, top, 1, height));
-		Mat right_mat = roi(Rect(width - 2, 0, 1, height));
-		Mat top_mat = roi(Rect(left, top, width, 1));
-		Mat bot_mat = roi(Rect(0, height - 2, width, 1));
+		imshow("Before Extension", cframe_gray(*iter));
+		waitKey(10);
+
+		//Left Extension
+		Mat left_mat = roi(Rect(0, 0, 1, roi_height));
+		vector<int> left_indexes;
+
+		for (int i = 0; i < left_mat.rows; ++i)
+			left_indexes.emplace_back(i);
+		int idx_count = left_indexes.size();
+		
+		while(idx_count != 0) {
+			for (int i = 0; i < idx_count; ++i) {
+				float current_px = static_cast<float>(left_mat.at<uchar>(left_indexes.at(i), 0));
+				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+					left_indexes.emplace_back(i);
+					if (0 <= i - 1)
+						left_indexes.emplace_back(i - 1);
+					if(i + 1 < idx_count)
+						left_indexes.emplace_back(i + 1);
+				}
+			}
+			left_indexes.erase(left_indexes.begin(), left_indexes.begin() + idx_count);
+			sort(left_indexes.begin(), left_indexes.end(), greater<int>());
+			auto cut_point = unique(left_indexes.begin(), left_indexes.end());
+			left_indexes.erase(cut_point, left_indexes.end());
+			idx_count = left_indexes.size();
+			if (idx_count != 0) {
+				if (roi_x == 0)
+					break;
+				*iter = Rect(--roi_x, roi_y, ++roi_width, roi_height);
+				roi = cframe_gray(*iter);
+				left_mat = roi(Rect(0, 0, 1, roi_height));
+			}
+		}
+
+		imshow("After Extension", cframe_gray(*iter));
+		waitKey(10);
 
 		++iter;
 	}
