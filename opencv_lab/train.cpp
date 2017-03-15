@@ -23,7 +23,7 @@ void main() {
 	Mat samples;
 	vector<KeyPoint> keypoints1;
 	
-	//ORB Detector
+	//FAST-N Detector
 	Ptr<ORB> detector = ORB::create(20, 1.2f, 8, 15, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 
 	Mat descriptors1, descriptors2;

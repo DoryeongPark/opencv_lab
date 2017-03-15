@@ -205,8 +205,9 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 
 		int scope = 13;
 
-		//DEBUG
-		destroyWindow("Before Extension");
+		//DEBUG - This code is to show improvement of cropping entire part [Before Extension]
+
+		/*destroyWindow("Before Extension");
 		imshow("Before Extension", cframe_gray(*iter));
 		waitKey(10);
 		cout << "Before Extension" << endl;
@@ -214,7 +215,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
 		cout << "Width: " << iter->width << endl;
 		cout << "Height: " << iter->height << endl;
-		cout << "---------------" << endl << endl;
+		cout << "---------------" << endl << endl;*/
 
 		vector<int> index_vector;
 
@@ -295,7 +296,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 
 		while (idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(top_mat.at<uchar>(index_vector.at(i), 0));
+				float current_px = static_cast<float>(top_mat.at<uchar>(0, index_vector.at(i)));
 				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
 					index_vector.emplace_back(i);
 					if (0 <= i - 1)
@@ -329,7 +330,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 
 		while (idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(bot_mat.at<uchar>(index_vector.at(i), 0));
+				float current_px = static_cast<float>(bot_mat.at<uchar>(0, index_vector.at(i)));
 				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
 					index_vector.emplace_back(i);
 					if (0 <= i - 1)
@@ -354,19 +355,18 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 
 		index_vector.clear();
 
-		//DEBUG
-		destroyWindow("After Extension");
+		//DEBUG - This code is to show improvement of cropping entire part [After Extension]
+
+		/*destroyWindow("After Extension");
 		imshow("After Extension", cframe_gray(*iter));
 		waitKey(10);
-		
 		cout << "After Extension" << endl;
 		cout << "---------------" << endl;
 		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
 		cout << "Width: " << iter->width << endl;
 		cout << "Height: " << iter->height << endl;
 		cout << "---------------" << endl << endl;
-
-
+*/
 		++iter;
 	}
 }
