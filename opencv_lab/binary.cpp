@@ -203,35 +203,44 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 			}
 		}
 
-		int scope = 10;
+		int scope = 13;
 
+		//DEBUG
+		destroyWindow("Before Extension");
 		imshow("Before Extension", cframe_gray(*iter));
 		waitKey(10);
+		cout << "Before Extension" << endl;
+		cout << "---------------" << endl;
+		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
+		cout << "Width: " << iter->width << endl;
+		cout << "Height: " << iter->height << endl;
+		cout << "---------------" << endl << endl;
+
+		vector<int> index_vector;
 
 		//Left Extension
 		Mat left_mat = roi(Rect(0, 0, 1, roi_height));
-		vector<int> left_indexes;
-
+		
 		for (int i = 0; i < left_mat.rows; ++i)
-			left_indexes.emplace_back(i);
-		int idx_count = left_indexes.size();
+			index_vector.emplace_back(i);
+		int idx_count = index_vector.size();
 		
 		while(idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(left_mat.at<uchar>(left_indexes.at(i), 0));
+				float current_px = static_cast<float>(left_mat.at<uchar>(index_vector.at(i), 0));
 				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
-					left_indexes.emplace_back(i);
+					index_vector.emplace_back(i);
 					if (0 <= i - 1)
-						left_indexes.emplace_back(i - 1);
+						index_vector.emplace_back(i - 1);
 					if(i + 1 < idx_count)
-						left_indexes.emplace_back(i + 1);
+						index_vector.emplace_back(i + 1);
 				}
 			}
-			left_indexes.erase(left_indexes.begin(), left_indexes.begin() + idx_count);
-			sort(left_indexes.begin(), left_indexes.end(), greater<int>());
-			auto cut_point = unique(left_indexes.begin(), left_indexes.end());
-			left_indexes.erase(cut_point, left_indexes.end());
-			idx_count = left_indexes.size();
+			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
+			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			auto cut_point = unique(index_vector.begin(), index_vector.end());
+			index_vector.erase(cut_point, index_vector.end());
+			idx_count = index_vector.size();
 			if (idx_count != 0) {
 				if (roi_x == 0)
 					break;
@@ -241,8 +250,122 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 			}
 		}
 
+		index_vector.clear();
+
+		//Right Extension
+		Mat right_mat = roi(Rect(roi_width - 2, 0, 1, roi_height));
+
+		for (int i = 0; i < right_mat.rows; ++i)
+			index_vector.emplace_back(i);
+		idx_count = index_vector.size();
+
+		while (idx_count != 0) {
+			for (int i = 0; i < idx_count; ++i) {
+				float current_px = static_cast<float>(right_mat.at<uchar>(index_vector.at(i), 0));
+				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+					index_vector.emplace_back(i);
+					if (0 <= i - 1)
+						index_vector.emplace_back(i - 1);
+					if (i + 1 < idx_count)
+						index_vector.emplace_back(i + 1);
+				}
+			}
+			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
+			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			auto cut_point = unique(index_vector.begin(), index_vector.end());
+			index_vector.erase(cut_point, index_vector.end());
+			idx_count = index_vector.size();
+			if (idx_count != 0) {
+				if (roi_x + roi_width == cframe_gray.cols)
+					break;
+				*iter = Rect(roi_x, roi_y, ++roi_width, roi_height);
+				roi = cframe_gray(*iter);
+				right_mat = roi(Rect(roi_width - 2, 0, 1, roi_height));
+			}
+		}
+		
+		index_vector.clear();
+
+		//Top Extension
+		Mat top_mat = roi(Rect(0, 0, roi_width, 1));
+
+		for (int i = 0; i < top_mat.rows; ++i)
+			index_vector.emplace_back(i);
+		idx_count = index_vector.size();
+
+		while (idx_count != 0) {
+			for (int i = 0; i < idx_count; ++i) {
+				float current_px = static_cast<float>(top_mat.at<uchar>(index_vector.at(i), 0));
+				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+					index_vector.emplace_back(i);
+					if (0 <= i - 1)
+						index_vector.emplace_back(i - 1);
+					if (i + 1 < idx_count)
+						index_vector.emplace_back(i + 1);
+				}
+			}
+			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
+			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			auto cut_point = unique(index_vector.begin(), index_vector.end());
+			index_vector.erase(cut_point, index_vector.end());
+			idx_count = index_vector.size();
+			if (idx_count != 0) {
+				if (roi_y == 0)
+					break;
+				*iter = Rect(roi_x, --roi_y, roi_width, ++roi_height);
+				roi = cframe_gray(*iter);
+				top_mat = roi(Rect(0, 0, roi_width, 1));
+			}
+		}
+
+		index_vector.clear();
+
+		//Bottom Extension
+		Mat bot_mat = roi(Rect(0, roi_height - 2, roi_width, 1));
+
+		for (int i = 0; i < bot_mat.rows; ++i)
+			index_vector.emplace_back(i);
+		idx_count = index_vector.size();
+
+		while (idx_count != 0) {
+			for (int i = 0; i < idx_count; ++i) {
+				float current_px = static_cast<float>(bot_mat.at<uchar>(index_vector.at(i), 0));
+				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+					index_vector.emplace_back(i);
+					if (0 <= i - 1)
+						index_vector.emplace_back(i - 1);
+					if (i + 1 < idx_count)
+						index_vector.emplace_back(i + 1);
+				}
+			}
+			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
+			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			auto cut_point = unique(index_vector.begin(), index_vector.end());
+			index_vector.erase(cut_point, index_vector.end());
+			idx_count = index_vector.size();
+			if (idx_count != 0) {
+				if (roi_y == 0)
+					break;
+				*iter = Rect(roi_x, roi_y, roi_width, ++roi_height);
+				roi = cframe_gray(*iter);
+				bot_mat = roi(Rect(0, roi_height - 2, roi_width, 1));
+			}
+		}
+
+		index_vector.clear();
+
+		//DEBUG
+		destroyWindow("After Extension");
 		imshow("After Extension", cframe_gray(*iter));
 		waitKey(10);
+		
+		cout << "After Extension" << endl;
+		cout << "---------------" << endl;
+		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
+		cout << "Width: " << iter->width << endl;
+		cout << "Height: " << iter->height << endl;
+		cout << "---------------" << endl << endl;
+
 
 		++iter;
 	}

@@ -380,39 +380,40 @@ init:
 			bounded_rects[i] = boundingRect(Mat{ contours_polygon[i] });
 		}
 
-		for (auto standard_rect = bounded_rects.begin(); standard_rect != bounded_rects.end(); ++standard_rect) {
+		//for (auto standard_rect = bounded_rects.begin(); standard_rect != bounded_rects.end(); ++standard_rect) {
 
-			int width = standard_rect->width * 3;
-			int height = standard_rect->height * 3;
-			int x = standard_rect->x - standard_rect->width * 3 / 4;
-			int y = standard_rect->y - standard_rect->height * 3 / 4;
+		//	int width = standard_rect->width * 3;
+		//	int height = standard_rect->height * 3;
+		//	int x = standard_rect->x - standard_rect->width * 3 / 4;
+		//	int y = standard_rect->y - standard_rect->height * 3 / 4;
 
-			if (x < 0) x = 0;
-			if (y < 0) y = 0;
-			if (x + width >= 320) width = 320 - x;
-			if (y + height >= 240) height = 240 - y;
+		//	if (x < 0) x = 0;
+		//	if (y < 0) y = 0;
+		//	if (x + width >= 320) width = 320 - x;
+		//	if (y + height >= 240) height = 240 - y;
 
-			Rect expanded_rect(x, y, width, height);
+		//	Rect expanded_rect(x, y, width, height);
 
-			for (auto another_rect = bounded_rects.begin(); another_rect != bounded_rects.end(); ++another_rect) {
-				if (*standard_rect == *another_rect)
-					continue;
+		//	for (auto another_rect = bounded_rects.begin(); another_rect != bounded_rects.end(); ++another_rect) {
+		//		if (*standard_rect == *another_rect)
+		//			continue;
 
-				if (expanded_rect.contains(Point{ another_rect->x + another_rect->width / 2,
-					another_rect->y + another_rect->height / 2 })) {
-					if (standard_rect->area() / 8 > another_rect->area()) {
-						//Remove Noise of Binary image(Small Rect)
-						expand_rect(*another_rect, 2);
-						threshold(binary(*another_rect), binary(*another_rect), 0, 0, CV_THRESH_BINARY);
-						
-						//Remove Rect object 
-						bounded_rects.erase(another_rect);
-						another_rect = bounded_rects.begin();
-						standard_rect = bounded_rects.begin();
-					}
-				}
-			}
-		}
+		//		if (expanded_rect.contains(Point{ another_rect->x + another_rect->width / 2,
+		//			another_rect->y + another_rect->height / 2 })) {
+		//			if (standard_rect->area() / 8 > another_rect->area()) {
+
+		//				//Remove Noise of Binary image(Small Rect)
+		//				expand_rect(*another_rect, 2);
+		//				threshold(binary(*another_rect), binary(*another_rect), 0, 0, CV_THRESH_BINARY);
+		//				
+		//				//Remove Rect object 
+		//				bounded_rects.erase(another_rect);
+		//				another_rect = bounded_rects.begin();
+		//				standard_rect = bounded_rects.begin();
+		//			}
+		//		}
+		//	}
+		//}
 
 		for (Rect& final_rect : bounded_rects) {
 			expand_rect(final_rect, 4);
