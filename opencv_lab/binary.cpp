@@ -14,9 +14,10 @@
 #include<opencv2\ml.hpp>
 
 static bool drag = false;
+static bool b_flag = false;
 
-constexpr int WIDTH = 320;
-constexpr int HEIGHT = 240;
+constexpr int WIDTH = 400;
+constexpr int HEIGHT = 300;
 
 constexpr int DATA_WIDTH = 240;
 constexpr int DATA_HEIGHT = 320;
@@ -93,10 +94,15 @@ public:
 
 };
 
+//Mouse Callback function
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
+
+//Get area which has many pixel value from histogram
+int get_max_area8(Mat histogram) noexcept;
+
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
-void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept;
+void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept;
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
@@ -131,6 +137,30 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 	}
 }
 
+int get_max_area8(Mat histogram) noexcept {
+
+	int area_number = 0;
+	int max_area_number = 0;
+	float current_pixel_total = 0;
+	float max_pixel_total = 0;
+
+	for (int i = 0; i < histogram.rows; ++i) {
+		if (i % 32 == 0 && i != 0) {
+			if (current_pixel_total > max_pixel_total) {
+				max_pixel_total = current_pixel_total;
+				max_area_number = area_number;
+			}
+			++area_number;
+			current_pixel_total = 0;
+		}
+		float current_pixel = histogram.at<float>(i, 0);
+		current_pixel_total += current_pixel;
+	}
+
+	return max_area_number * 32;
+
+}
+
 void expand_rect(Rect& rect, const int& pixel) noexcept {
 
 	int x1 = rect.x;
@@ -154,7 +184,9 @@ void expand_rect(Rect& rect, const int& pixel) noexcept {
 	rect.height = y2 - y1;
 }
 
+
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept {
+
 	for (auto iter = rects.begin(); iter != rects.end();) {
 		Mat cframe_clone = cframe.clone();
 		rectangle(cframe_clone, *iter, Scalar(0, 0, 255), 0.5);
@@ -166,18 +198,20 @@ void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept {
 		char ch = waitKey(10);
 		while ((ch = waitKey(10)) != 32 && ch != 27);
 	}
+	
 }
 
-void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
+void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept {
 	
-	for (auto iter = rects.begin(); iter != rects.end();) {
-		
+	for (auto iter = rects.begin(); iter != rects.end();) {		
 		if (iter->width <= 1 || iter->height <= 1) {
 			++iter;
 			continue;
 		}
 
-		Mat roi = cframe_gray(*iter);
+		Mat roi_gray = cframe_gray(*iter);
+		Mat roi_binary = binary(*iter);
+
 		int roi_x = iter->x;
 		int roi_y = iter->y;
 		int roi_width = iter->width;
@@ -189,25 +223,15 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		const float* channel_ranges = channel_range;
 		int hist_size = 256;
 
-		//Calculate TOP 1 Pixel Value 
-		calcHist(&roi, 1, channel_numbers, Mat(), histogram, 1, &hist_size, &channel_ranges);
-
-		int rank1_px = 0;
-		int rank1_cnt = -1;
-
-		for (int i = 0; i < histogram.rows; ++i) {
-			float current_cnt = histogram.at<float>(i, 0);
-			if (current_cnt > rank1_cnt) {
-				rank1_px = i;
-				rank1_cnt = current_cnt;
-			}
-		}
-
-		int scope = 13;
-
+		//Calculate TOP 1 scope
+		calcHist(&roi_gray, 1, channel_numbers, Mat(), histogram, 1, &hist_size, &channel_ranges);
+		int min_scope = get_max_area8(histogram);
+	
+		//-----------------------------------------------------------------------------------
 		//DEBUG - This code is to show improvement of cropping entire part [Before Extension]
+		//-----------------------------------------------------------------------------------
 
-		/*destroyWindow("Before Extension");
+		destroyWindow("Before Extension");
 		imshow("Before Extension", cframe_gray(*iter));
 		waitKey(10);
 		cout << "Before Extension" << endl;
@@ -215,21 +239,21 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
 		cout << "Width: " << iter->width << endl;
 		cout << "Height: " << iter->height << endl;
-		cout << "---------------" << endl << endl;*/
+		cout << "---------------" << endl << endl;
 
 		vector<int> index_vector;
 
 		//Left Extension
-		Mat left_mat = roi(Rect(0, 0, 1, roi_height));
-		
-		for (int i = 0; i < left_mat.rows; ++i)
+		Mat left_mat_gray = roi_gray(Rect(0, 0, 1, roi_height));
+
+		for (int i = 0; i < left_mat_gray.rows; ++i)
 			index_vector.emplace_back(i);
 		int idx_count = index_vector.size();
 		
 		while(idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(left_mat.at<uchar>(index_vector.at(i), 0));
-				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+				float current_px = static_cast<float>(left_mat_gray.at<uchar>(index_vector.at(i), 0));
+				if (min_scope <= current_px && current_px < min_scope + 32) {
 					index_vector.emplace_back(i);
 					if (0 <= i - 1)
 						index_vector.emplace_back(i - 1);
@@ -238,7 +262,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				}
 			}
 			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			sort(index_vector.begin(), index_vector.end());
 			auto cut_point = unique(index_vector.begin(), index_vector.end());
 			index_vector.erase(cut_point, index_vector.end());
 			idx_count = index_vector.size();
@@ -246,15 +270,21 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				if (roi_x == 0)
 					break;
 				*iter = Rect(--roi_x, roi_y, ++roi_width, roi_height);
-				roi = cframe_gray(*iter);
-				left_mat = roi(Rect(0, 0, 1, roi_height));
+				roi_gray = cframe_gray(*iter);
+				
+				//Reflect indexes to binary image
+				roi_binary = binary(*iter);
+				for (auto index : index_vector)
+					roi_binary.at<uchar>(index, 0) = 255;
+
+				left_mat_gray = roi_gray(Rect(0, 0, 1, roi_height));
 			}
 		}
 
 		index_vector.clear();
 
 		//Right Extension
-		Mat right_mat = roi(Rect(roi_width - 2, 0, 1, roi_height));
+		Mat right_mat = roi_gray(Rect(roi_width - 2, 0, 1, roi_height));
 
 		for (int i = 0; i < right_mat.rows; ++i)
 			index_vector.emplace_back(i);
@@ -263,7 +293,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		while (idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
 				float current_px = static_cast<float>(right_mat.at<uchar>(index_vector.at(i), 0));
-				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+				if (min_scope <= current_px && current_px < min_scope + 32) {
 					index_vector.emplace_back(i);
 					if (0 <= i - 1)
 						index_vector.emplace_back(i - 1);
@@ -272,7 +302,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				}
 			}
 			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			sort(index_vector.begin(), index_vector.end());
 			auto cut_point = unique(index_vector.begin(), index_vector.end());
 			index_vector.erase(cut_point, index_vector.end());
 			idx_count = index_vector.size();
@@ -280,15 +310,21 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				if (roi_x + roi_width == cframe_gray.cols)
 					break;
 				*iter = Rect(roi_x, roi_y, ++roi_width, roi_height);
-				roi = cframe_gray(*iter);
-				right_mat = roi(Rect(roi_width - 2, 0, 1, roi_height));
+				roi_gray = cframe_gray(*iter);
+				
+				////Reflect indexes to binary image
+				//roi_binary = binary(*iter);
+				//for (auto index : index_vector)
+				//	roi_binary.at<uchar>(index, roi_x + roi_width - 1) = 255;
+
+				right_mat = roi_gray(Rect(roi_width - 2, 0, 1, roi_height));
 			}
 		}
 		
 		index_vector.clear();
 
 		//Top Extension
-		Mat top_mat = roi(Rect(0, 0, roi_width, 1));
+		Mat top_mat = roi_gray(Rect(0, 0, roi_width, 1));
 
 		for (int i = 0; i < top_mat.rows; ++i)
 			index_vector.emplace_back(i);
@@ -297,7 +333,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		while (idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
 				float current_px = static_cast<float>(top_mat.at<uchar>(0, index_vector.at(i)));
-				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+				if (min_scope <= current_px && current_px < min_scope + 32) {
 					index_vector.emplace_back(i);
 					if (0 <= i - 1)
 						index_vector.emplace_back(i - 1);
@@ -306,7 +342,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				}
 			}
 			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			sort(index_vector.begin(), index_vector.end());
 			auto cut_point = unique(index_vector.begin(), index_vector.end());
 			index_vector.erase(cut_point, index_vector.end());
 			idx_count = index_vector.size();
@@ -314,15 +350,21 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				if (roi_y == 0)
 					break;
 				*iter = Rect(roi_x, --roi_y, roi_width, ++roi_height);
-				roi = cframe_gray(*iter);
-				top_mat = roi(Rect(0, 0, roi_width, 1));
+				roi_gray = cframe_gray(*iter);
+
+				////Reflect indexes to binary image
+				//roi_binary = binary(*iter);
+				//for (auto index : index_vector)
+				//	roi_binary.at<uchar>(0, index) = 255;
+
+				top_mat = roi_gray(Rect(0, 0, roi_width, 1));
 			}
 		}
 
 		index_vector.clear();
 
 		//Bottom Extension
-		Mat bot_mat = roi(Rect(0, roi_height - 2, roi_width, 1));
+		Mat bot_mat = roi_gray(Rect(0, roi_height - 2, roi_width, 1));
 
 		for (int i = 0; i < bot_mat.rows; ++i)
 			index_vector.emplace_back(i);
@@ -331,7 +373,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		while (idx_count != 0) {
 			for (int i = 0; i < idx_count; ++i) {
 				float current_px = static_cast<float>(bot_mat.at<uchar>(0, index_vector.at(i)));
-				if (rank1_px - scope < current_px && current_px < rank1_px + scope) {
+				if (min_scope <= current_px && current_px < min_scope + 32) {
 					index_vector.emplace_back(i);
 					if (0 <= i - 1)
 						index_vector.emplace_back(i - 1);
@@ -340,7 +382,7 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				}
 			}
 			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end(), greater<int>());
+			sort(index_vector.begin(), index_vector.end());
 			auto cut_point = unique(index_vector.begin(), index_vector.end());
 			index_vector.erase(cut_point, index_vector.end());
 			idx_count = index_vector.size();
@@ -348,16 +390,24 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 				if (roi_y == 0)
 					break;
 				*iter = Rect(roi_x, roi_y, roi_width, ++roi_height);
-				roi = cframe_gray(*iter);
-				bot_mat = roi(Rect(0, roi_height - 2, roi_width, 1));
+				roi_gray = cframe_gray(*iter);
+				
+				////Reflect indexes to binary image
+				//roi_binary = binary(*iter);
+				//for (auto index : index_vector)
+				//	roi_binary.at<uchar>(roi_y + roi_height - 1, index) = 1;
+
+				bot_mat = roi_gray(Rect(0, roi_height - 2, roi_width, 1));
 			}
 		}
 
 		index_vector.clear();
 
+		//-----------------------------------------------------------------------------------
 		//DEBUG - This code is to show improvement of cropping entire part [After Extension]
+		//-----------------------------------------------------------------------------------
 
-		/*destroyWindow("After Extension");
+		destroyWindow("After Extension");
 		imshow("After Extension", cframe_gray(*iter));
 		waitKey(10);
 		cout << "After Extension" << endl;
@@ -366,9 +416,26 @@ void expand_object_roi(Mat& cframe_gray, vector<Rect>& rects) noexcept {
 		cout << "Width: " << iter->width << endl;
 		cout << "Height: " << iter->height << endl;
 		cout << "---------------" << endl << endl;
-*/
+
+		/*expand_rect(*iter, 2);
+		rectangle(binary, *iter, Scalar{ 255 });
+		imshow("Binary", binary);
+		waitKey(10);*/
+
 		++iter;
 	}
+}
+
+void brend_color_and_binary(Mat& cframe, Mat& binary) {
+
+	for (int i = 0; i < binary.rows; ++i)
+		for (int j = 0; j < binary.cols; ++j)
+			if ((int)binary.at<uchar>(i, j) == 255) {
+				cframe.at<Vec3b>(i, j)[0] = 0;
+				cframe.at<Vec3b>(i, j)[1] = 0;
+				cframe.at<Vec3b>(i, j)[2] = 255;
+			}
+
 }
 
 int main() {
@@ -391,20 +458,20 @@ init:
 
 	//Video resolution Setting
 	VideoCapture camera = VideoCapture{ file_name };
-	camera.set(CV_CAP_PROP_FRAME_WIDTH, 320);
-	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 240);
+	camera.set(CV_CAP_PROP_FRAME_WIDTH, WIDTH);
+	camera.set(CV_CAP_PROP_FRAME_HEIGHT, HEIGHT);
 
 	//Initialize Matrix
-	Mat cframe{ 240, 320, CV_8UC3 };
-	Mat cframe_gray{ 240, 320, CV_8UC1 };
-	Mat accumulator = Mat::zeros(Size{ 320, 240 }, CV_32FC1);
-	Mat mask{ 240, 320, CV_8U };
+	Mat cframe{ HEIGHT, WIDTH, CV_8UC3 };
+	Mat cframe_gray{ HEIGHT, WIDTH, CV_8UC1 };
+	Mat accumulator = Mat::zeros(Size{ WIDTH, HEIGHT }, CV_32FC1);
+	Mat mask{ HEIGHT, WIDTH, CV_8U };
 	mask = Scalar{ 1 };
 
-	Mat background{ 240, 320, CV_8UC1 };
+	Mat background{ HEIGHT, WIDTH, CV_8UC1 };
 	Mat binary;
 	Mat noise_remover = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
-	Mat expander = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
+	Mat expander = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 7 }, Point{ 3, 3 });
 	deque<Point> point_queue;
 
 	vector<vector<Point>> contours;
@@ -441,7 +508,7 @@ init:
 		cvtColor(cframe, cframe_gray, COLOR_BGR2GRAY);
 
 		absdiff(background, cframe_gray, binary);
-		threshold(binary, binary, 25, 255, THRESH_BINARY);
+		threshold(binary, binary, 20, 255, THRESH_BINARY);
 
 		morphologyEx(binary, binary, MORPH_ERODE, noise_remover);
 		morphologyEx(binary, binary, MORPH_DILATE, expander);
@@ -466,21 +533,20 @@ init:
 			bounded_rects[i] = boundingRect(Mat{ contours_polygon[i] });
 		}
 
-		/*for (Rect& final_rect : bounded_rects) {
-			expand_rect(final_rect, 4);
-		}*/
+		char ch;
+		ch = waitKey(10);
 
+		//B Key - For brend color and binary
+		if (ch == 66 || ch == 98)
+			b_flag = !b_flag;
+
+		if(b_flag)
+			brend_color_and_binary(cframe, binary);
 		
-		imshow("Input", cframe);
-		imshow("Background", background);
-		imshow("Binary", binary);
-
-		char ch = waitKey(10);
-
 		//Space key
 		if (ch == 32) {
+			expand_object_roi(cframe_gray, binary, bounded_rects, 13);
 			//display_rects(cframe, binary, bounded_rects);
-			expand_object_roi(cframe_gray, bounded_rects);
 			while ((ch = waitKey(10)) != 32 && ch != 27);
 			if (ch == 27) break;
 		}
@@ -489,10 +555,13 @@ init:
 		if (ch == 27)
 			break;
 
-		Sleep(18);
+		imshow("Input", cframe);
+		imshow("Background", background);
+		imshow("Binary", binary);
+		waitKey(10);
 
 	}
-
+	
 	destroyAllWindows();
 	imwrite("Background.jpg", accumulator);
 }

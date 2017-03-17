@@ -38,6 +38,7 @@ vector<KeyPoint> keypoints;
 
 class Cropper {
 private:
+
 	int first_x = -1;
 	int first_y = -1;
 	int second_x = -1;
@@ -95,7 +96,6 @@ public:
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void expand_rect(Rect& rect, const int& pixel) noexcept;
-//void adaptive_fast()
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
