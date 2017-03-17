@@ -21,7 +21,7 @@ void main() {
 
 	Mat groups;
 	Mat samples;
-	vector<KeyPoint> keypoints1;
+	vector<KeyPoint> keypoints;
 	
 	//FAST-N Detector
 	Ptr<ORB> detector = ORB::create(20, 1.2f, 8, 15, 0, 2, ORB::HARRIS_SCORE, 31, 20);
@@ -41,11 +41,11 @@ void main() {
 		
 		Mat img = imread(nn.str());
 		
-		detector->detect(img, keypoints1);
+		detector->detect(img, keypoints);
 
-		extractor->compute(img, keypoints1, descriptors1);
+		extractor->compute(img, keypoints, descriptors1);
 
-		drawKeypoints(img, keypoints1, img);
+		drawKeypoints(img, keypoints, img);
 		imshow("Sample", img);
 		waitKey(10);
 
@@ -59,7 +59,7 @@ void main() {
 			cout << "Remove - " + nn.str() << endl;
 		}
 
-		keypoints1.clear();
+		keypoints.clear();
 
 	}
 	

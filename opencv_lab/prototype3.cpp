@@ -27,7 +27,7 @@ using namespace ml;
 
 //ORB Detector & SURF extractor
 Ptr<ORB> detector = ORB::create(30, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
-Mat descriptors;
+Mat descriptor;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = SVM::create();
 
@@ -121,7 +121,7 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 		resize(cropped_mat, cropped_mat, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_CUBIC);
 		cvtColor(cropped_mat, cropped_mat, CV_BGR2GRAY);
 		detector->detect(cropped_mat, keypoints);
-		extractor->compute(cropped_mat, keypoints, descriptors);
+		extractor->compute(cropped_mat, keypoints, descriptor);
 		drawKeypoints(cropped_mat, keypoints, cropped_mat);
 
 		imshow("Data", cropped_mat);
@@ -236,22 +236,22 @@ void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_re
 		//Check with classifier
 		keypoints.clear(); 
 		detector->detect(result, keypoints);
-		extractor->compute(result, keypoints, descriptors);
-		descriptors = descriptors.reshape(1, 1);
+		extractor->compute(result, keypoints, descriptor);
+		descriptor = descriptor.reshape(1, 1);
 
 		imshow("Check", result);
 		waitKey(20);
 		
-		if (descriptors.cols != classifier->getVarCount()) {
+		if (descriptor.cols != classifier->getVarCount()) {
 			//Log
 			cout << classifier->getVarCount() << endl;
-			cout << descriptors.cols << endl;
+			cout << descriptor.cols << endl;
 			//Log
 			iter = final_rects.erase(iter);
 			continue;
 		}
 
-		float is_matching = classifier->predict(descriptors);
+		float is_matching = classifier->predict(descriptor);
 
 		Mat result_clone = result.clone();
 

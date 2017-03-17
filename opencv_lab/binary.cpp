@@ -28,7 +28,7 @@ using namespace ml;
 
 //ORB Detector & SURF extractor
 Ptr<ORB> detector = ORB::create(15, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
-Mat descriptors;
+Mat descriptor;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = SVM::create();
 
@@ -123,7 +123,7 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 		cvtColor(cropped_mat, cropped_mat, CV_BGR2GRAY);
 		//detector->detect(cropped_mat, keypoints);
 		FAST(cropped_mat, keypoints, 3);
-		extractor->compute(cropped_mat, keypoints, descriptors);
+		extractor->compute(cropped_mat, keypoints, descriptor);
 		drawKeypoints(cropped_mat, keypoints, cropped_mat);
 
 		imshow("Data", cropped_mat);
