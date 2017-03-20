@@ -150,6 +150,7 @@ void expand_rect(Rect& rect, const int& pixel) noexcept {
 	rect.y = y1;
 	rect.width = x2 - x1;
 	rect.height = y2 - y1;
+
 }
 
 void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept{

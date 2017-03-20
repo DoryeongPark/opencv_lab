@@ -471,7 +471,7 @@ init:
 	Mat background{ HEIGHT, WIDTH, CV_8UC1 };
 	Mat binary;
 	Mat noise_remover = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
-	Mat expander = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 7 }, Point{ 3, 3 });
+	Mat expander = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 9 }, Point{ 3, 4 });
 	deque<Point> point_queue;
 
 	vector<vector<Point>> contours;
@@ -545,7 +545,7 @@ init:
 		
 		//Space key
 		if (ch == 32) {
-			expand_object_roi(cframe_gray, binary, bounded_rects, 13);
+			//expand_object_roi(cframe_gray, binary, bounded_rects, 13);
 			//display_rects(cframe, binary, bounded_rects);
 			while ((ch = waitKey(10)) != 32 && ch != 27);
 			if (ch == 27) break;

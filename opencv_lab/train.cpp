@@ -14,26 +14,47 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
+void normalize_keypoints(vector<KeyPoint>& keypoints, int size) {
+	
+	if (keypoints.size() <= size)
+		return;
+
+	int current_size = keypoints.size();
+	int counter = 0;
+	float interval = static_cast<float>(current_size) / size;
+
+	vector<KeyPoint> copy;
+	copy.reserve(keypoints.size());
+
+	while (counter != size) {
+
+		int index = static_cast<int>(interval * (float)counter);
+		copy.emplace_back(keypoints[index]);
+		++counter;
+
+	}
+
+	keypoints = copy;
+
+}
+
 void main() {
 
-	int width = 240;
-	int height = 320;
+	int width = 300;
+	int height = 400;
 
 	Mat groups;
 	Mat samples;
 	vector<KeyPoint> keypoints;
-	
-	//FAST-N Detector
-	Ptr<ORB> detector = ORB::create(20, 1.2f, 8, 15, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 
-	Mat descriptors1, descriptors2;
+	Mat descriptors;
 
 	Ptr<SURF> extractor = SURF::create();
 
 	//Sample of similar images
-	for (int i = 1; i <= 900; ++i) {
+	for (int i = 1; i <= 1000; ++i) {
 		stringstream nn;
-		nn << "pedestrian_sample/" << i << ".jpg";
+		nn << "training_data/" << i << ".jpg";
 
 		if (!ifstream(nn.str()).good()) {
 			continue;
@@ -41,18 +62,19 @@ void main() {
 		
 		Mat img = imread(nn.str());
 		
-		detector->detect(img, keypoints);
-
-		extractor->compute(img, keypoints, descriptors1);
+		FAST(img, keypoints, 4);
+		normalize_keypoints(keypoints, 15);
+		
+		extractor->compute(img, keypoints, descriptors);
 
 		drawKeypoints(img, keypoints, img);
-		imshow("Sample", img);
+		imshow("Training Data", img);
 		waitKey(10);
 
-		descriptors1 = descriptors1.reshape(1, 1);
+		descriptors = descriptors.reshape(1, 1);
 		
 		try {
-			samples.push_back(descriptors1);
+			samples.push_back(descriptors);
 			groups.push_back(0);
 		}
 		catch (Exception e) {
@@ -78,39 +100,6 @@ void main() {
 
 	classifierSVM->train(samples, ml::ROW_SAMPLE, groups);
 	classifierSVM->save("classifier.yml");
-	
-	////Test for 10 test samples - 7 & 9 must be classified.
-	//for (int i = 1; i <= 10; ++i) {
-	//	stringstream nn;
-
-	//	nn << "testers/" << "unknown" << i << ".png";
-
-	//	Mat unknown = imread(nn.str());
-	//	Mat grayscaledUnknown;
-
-	//	resize(unknown, unknown, Size(width, height), 0, 0, CV_INTER_NN);
-	//	cvtColor(unknown, grayscaledUnknown, COLOR_BGR2GRAY);
-	//	
-	//	detector->detect(grayscaledUnknown, keypoints1);
-
-	//	extractor->compute(grayscaledUnknown, keypoints1, descriptors2);
-
-	//	float result = classifierSVM->predict(descriptors2.reshape(1, 1));
-
-	//	if (result == 1)
-	//		putText(unknown, "CORRECT", Point(20, 20), 1, 0.8, Scalar(0, 255, 0));
-	//	else
-	//		putText(unknown, "NOT CORRECT", Point(20, 20), 1, 0.8, Scalar(0, 0, 255));
-	//	
-	//	drawKeypoints(unknown, keypoints1, unknown);
-	//	imshow("Result", unknown);
-	//	waitKey(10);
-
-	//	cout << nn.str() << ": class " << result << endl;
-
-	//	keypoints1.clear();
-	//}
 
 	waitKey(10);
-
 }
