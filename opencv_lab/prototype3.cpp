@@ -95,7 +95,7 @@ public:
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void classify(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
-void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
+void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept;
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 	
@@ -153,7 +153,7 @@ void expand_rect(Rect& rect, const int& pixel) noexcept {
 
 }
 
-void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept{
+void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept{
 
 	for (Rect& rect : final_rects) {
 		int width = rect.width;

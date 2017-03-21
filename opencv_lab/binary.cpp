@@ -27,7 +27,7 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
-int material_count = 0;
+int material_count = 200;
 
 //ORB Detector & SURF extractor
 Ptr<ORB> detector = ORB::create(15, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
@@ -98,10 +98,6 @@ public:
 
 //Mouse Callback function
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
-
-//Get area which has many pixel value from histogram
-int get_max_area8(Mat histogram) noexcept;
-
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
 void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept;
@@ -111,10 +107,13 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 	Cropper* cropper = (Cropper*)param;
 
 	if (callback_event == CV_EVENT_LBUTTONDOWN) {
+
 		drag = true;
 		cropper->determine_first_coordinate(x, y);
+
 	}
 	else if (callback_event == CV_EVENT_MOUSEMOVE && drag) {
+
 		Mat copied_cframe;
 		cropper->get_cframe().copyTo(copied_cframe);
 
@@ -122,8 +121,10 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 			Rect(cropper->get_first_point(), Point(x, y)),
 			Scalar(0, 255, 0));
 		imshow("Input", copied_cframe);
+
 	}
 	else if (callback_event == CV_EVENT_LBUTTONUP) {
+
 		drag = false;
 		cropper->determine_second_coordinate(x, y);
 		Mat cropped_mat = cropper->get_matrix();
@@ -136,9 +137,12 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
 		imshow("Data", cropped_mat);
 		imshow("Input", cropper->get_cframe());
+
 	}
 }
 
+
+//Get area which has maximum points - Can be deprecated
 int get_max_area8(Mat histogram) noexcept {
 
 	int area_number = 0;
@@ -163,7 +167,7 @@ int get_max_area8(Mat histogram) noexcept {
 
 }
 
-void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept {
+void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept {
 
 	for (Rect& rect : final_rects) {
 		int width = rect.width;
@@ -201,6 +205,7 @@ void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& fina
 		addWeighted(background_roi, 0, object_cframe, 1, 0.0, result(roi));
 
 		imwrite(to_string(++material_count) + ".jpg", result);
+
 	}
 
 }
@@ -514,8 +519,8 @@ init:
 
 	Mat background{ HEIGHT, WIDTH, CV_8UC1 };
 	Mat binary;
-	Mat noise_remover = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
-	Mat expander = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 9 }, Point{ 3, 4 });
+	Mat opener = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
+	Mat closer = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 9 }, Point{ 3, 4 });
 	deque<Point> point_queue;
 
 	vector<vector<Point>> contours;
@@ -552,10 +557,11 @@ init:
 		cvtColor(cframe, cframe_gray, COLOR_BGR2GRAY);
 
 		absdiff(background, cframe_gray, binary);
-		threshold(binary, binary, 20, 255, THRESH_BINARY);
+		threshold(binary, binary, 16, 255, THRESH_BINARY);
 
-		morphologyEx(binary, binary, MORPH_ERODE, noise_remover);
-		morphologyEx(binary, binary, MORPH_DILATE, expander);
+		morphologyEx(binary, binary, MORPH_OPEN, opener);
+		morphologyEx(binary, binary, MORPH_DILATE, closer);
+		morphologyEx(binary, binary, MORPH_ERODE, opener);
 
 		accumulateWeighted(cframe_gray, accumulator, 0.001, mask);
 		convertScaleAbs(accumulator, background);
@@ -567,7 +573,8 @@ init:
 		vector<vector<Point>> contours_polygon{ contours.size() };
 		vector<Rect> bounded_rects{ contours.size() };
 
-		drawContours(
+		drawContours
+		(
 			binary, contours, -1, cv::Scalar::all(255),
 			CV_FILLED, 8, hierarchy, INT_MAX
 		);
@@ -586,6 +593,10 @@ init:
 
 		if(b_flag)
 			brend_color_and_binary(cframe, binary);
+
+		//S key - Save all objects as jpg file
+		if (ch == 115 || ch == 83)
+			save_objects_as_file(cframe, cframe_gray, binary, bounded_rects);
 		
 		//Space key
 		if (ch == 32) {
