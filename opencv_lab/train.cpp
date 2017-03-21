@@ -13,25 +13,49 @@
 #include<experimental/filesystem>
 
 using namespace std;
-using namespace experimental::filesystem;
 using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
+namespace fs = experimental::filesystem;
 
-void get_file_names(const string& directory) {
-	
+int DATA_WIDTH = 240;
+int DATA_HEIGHT = 320;
+
+/*
+	Allocate increment number for the directory files
+*/
+void number_files(const fs::path& dir_path)
+{
 	vector<string> file_names;
 
-	if (!exists(directory))
+	if (!fs::exists(dir_path))
 		return;
-	
-	path directory(directory);
-	directory_iterator dir_iter(directory), end;
-	
 
+	fs::directory_iterator end_iter;
 
+	for (fs::directory_iterator iter(dir_path);
+		iter != end_iter;
+		++iter)
+	{
+		if (fs::is_directory(iter->status()))
+		{
+			continue;
+		}
+		file_names.push_back(iter->path().string().substr(dir_path.string().size() + 1));
+	}
+
+	for (int i = 0; i < file_names.size(); ++i) {
+
+		string old_name = dir_path.string() + "//" + file_names.at(i);
+		string new_name = dir_path.string() + "//" + to_string(i) + ".jpg";
+		rename(old_name.c_str(), new_name.c_str());
+
+	}
 }
 
+/*
+	Normalize keypoints as size
+*/
 void normalize_keypoints(vector<KeyPoint>& keypoints, int size) {
 	
 	if (keypoints.size() <= size)
@@ -58,9 +82,6 @@ void normalize_keypoints(vector<KeyPoint>& keypoints, int size) {
 
 void main() {
 
-	int width = 300;
-	int height = 400;
-
 	Mat groups;
 	Mat samples;
 	vector<KeyPoint> keypoints;
@@ -69,9 +90,7 @@ void main() {
 
 	Ptr<SURF> extractor = SURF::create();
 
-	vector<string> file_names;
-
-	get_file_names();
+	number_files("C:\\Users\\zzada\\Documents\\GitHub\\opencv_lab\\opencv_lab\\training_data");
 
 	//Sample of similar images
 	for (int i = 1; i <= 1000; ++i) {
