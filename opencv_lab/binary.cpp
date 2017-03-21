@@ -27,6 +27,8 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
+int material_count = 0;
+
 //ORB Detector & SURF extractor
 Ptr<ORB> detector = ORB::create(15, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 Mat descriptor;
@@ -158,6 +160,48 @@ int get_max_area8(Mat histogram) noexcept {
 	}
 
 	return max_area_number * 32;
+
+}
+
+void save_objects(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept {
+
+	for (Rect& rect : final_rects) {
+		int width = rect.width;
+		int height = rect.height;
+		float ratio = (float)(DATA_HEIGHT / 2) / (float)height;
+
+		int modified_width = (int)((float)rect.width * ratio);
+		int modified_height = DATA_HEIGHT / 2;
+
+		if (modified_width > DATA_WIDTH)
+			continue;
+
+		Mat object_cframe = cframe_gray(rect);
+		Mat object_binary = binary(rect);
+
+		resize(object_cframe, object_cframe, Size(modified_width, modified_height), 0, 0, CV_INTER_CUBIC);
+		resize(object_binary, object_binary, Size(modified_width, modified_height), 0, 0, CV_INTER_AREA);
+
+		threshold(object_binary, object_binary, 0, 1, CV_THRESH_BINARY);
+		object_cframe = object_cframe.mul(object_binary);
+
+		Mat background = Mat(DATA_HEIGHT, DATA_WIDTH, CV_8UC1);
+		background = Scalar::all(0);
+
+		Mat result = background.clone();
+
+		Rect roi;
+		roi.width = modified_width;
+		roi.height = modified_height;
+		roi.x = (DATA_WIDTH - modified_width) / 2;
+		roi.y = (DATA_HEIGHT - modified_height) / 2;
+
+		Mat background_roi = background(roi);
+
+		addWeighted(background_roi, 0, object_cframe, 1, 0.0, result(roi));
+
+		imwrite(to_string(++material_count) + ".jpg", result);
+	}
 
 }
 

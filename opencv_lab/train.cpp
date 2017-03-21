@@ -9,10 +9,28 @@
 #include<opencv2\xfeatures2d.hpp>
 #include<opencv2\ml.hpp>
 
+#include<Windows.h>
+#include<experimental/filesystem>
+
 using namespace std;
+using namespace experimental::filesystem;
 using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
+
+void get_file_names(const string& directory) {
+	
+	vector<string> file_names;
+
+	if (!exists(directory))
+		return;
+	
+	path directory(directory);
+	directory_iterator dir_iter(directory), end;
+	
+
+
+}
 
 void normalize_keypoints(vector<KeyPoint>& keypoints, int size) {
 	
@@ -50,6 +68,10 @@ void main() {
 	Mat descriptors;
 
 	Ptr<SURF> extractor = SURF::create();
+
+	vector<string> file_names;
+
+	get_file_names();
 
 	//Sample of similar images
 	for (int i = 1; i <= 1000; ++i) {
