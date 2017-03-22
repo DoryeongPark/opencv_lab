@@ -104,7 +104,7 @@ void main() {
 		Mat img = imread(nn.str());
 		
 		FAST(img, keypoints, 4);
-		normalize_keypoints(keypoints, 15);
+		//normalize_keypoints(keypoints, 15);
 		
 		extractor->compute(img, keypoints, descriptors);
 

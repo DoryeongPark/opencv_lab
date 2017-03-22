@@ -98,9 +98,11 @@ public:
 
 //Mouse Callback function
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
+void create_undetectable_background(Mat& black_backgrounded, Mat& object_roi) noexcept;
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
 void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept;
+
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
@@ -140,7 +142,6 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
 	}
 }
-
 
 //Get area which has maximum points - Can be deprecated
 int get_max_area8(Mat histogram) noexcept {
@@ -192,8 +193,6 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 		Mat background = Mat(DATA_HEIGHT, DATA_WIDTH, CV_8UC1);
 		background = Scalar::all(0);
 
-		Mat result = background.clone();
-
 		Rect roi;
 		roi.width = modified_width;
 		roi.height = modified_height;
@@ -202,12 +201,66 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 
 		Mat background_roi = background(roi);
 
-		addWeighted(background_roi, 0, object_cframe, 1, 0.0, result(roi));
+		//addWeighted(background_roi, 0, object_cframe, 1, 0.0, black_backgrounded(roi));
+		
+		//Logic for undetectable background creation
+		create_undetectable_background(background, object_cframe);
+		
 
-		imwrite(to_string(++material_count) + ".jpg", result);
+		//imwrite(to_string(++material_count) + ".jpg", black_backgrounded);
 
 	}
 
+}
+
+void create_undetectable_background(Mat& background, Mat& object_roi) noexcept{
+
+	int rows = object_roi.rows;
+	int cols = object_roi.cols;
+
+	vector<uchar> left;
+	vector<uchar> right;
+
+	left.reserve(rows);
+	right.reserve(rows);
+	
+	for (int i = 0; i < rows; ++i) {
+		for (int j = 0; j < cols; ++j)
+			if (static_cast<int>(object_roi.at<uchar>(i, j)) != 0) {
+				left.emplace_back(object_roi.at<uchar>(i, j));
+				break;
+			}
+		for(int j = cols - 1; j >= 0; --j)
+			if(static_cast<int>(object_roi.at<uchar>(i, j)) != 0){
+				right.emplace_back(object_roi.at<uchar>(i, j));
+				break;
+			}
+	}
+
+	int histogram[8] = { 0, 0, 0, 0,
+						 0, 0, 0, 0 };
+	int max_point = -1;
+	int max_value = -1;
+	const int scope = 16;
+	
+	for (auto& pixel : left)
+		++histogram[(static_cast<int>(pixel)/ (scope * 2))];
+
+	for (auto& pixel : right)
+		++histogram[(static_cast<int>(pixel) / (scope * 2))];
+
+	for (int i = 0; i < 8; ++i) 
+		if (max_value < histogram[i]) {
+			max_value = histogram[i];
+			max_point = i;
+		}
+
+	for(int i = 0; i < left.size())
+	
+	imshow("Confirm", object_roi);
+	waitKey(10);
+
+	
 }
 
 void expand_rect(Rect& rect, const int& pixel) noexcept {
@@ -566,9 +619,11 @@ init:
 		accumulateWeighted(cframe_gray, accumulator, 0.001, mask);
 		convertScaleAbs(accumulator, background);
 
-		findContours(
+		findContours
+		(
 			binary, contours, hierarchy,
-			CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point{ 0, 0 });
+			CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point{ 0, 0 }
+		);
 
 		vector<vector<Point>> contours_polygon{ contours.size() };
 		vector<Rect> bounded_rects{ contours.size() };
