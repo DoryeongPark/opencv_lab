@@ -191,8 +191,8 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 		threshold(object_binary, object_binary, 0, 1, CV_THRESH_BINARY);
 		object_cframe = object_cframe.mul(object_binary);
 
-		Mat background = Mat(DATA_HEIGHT, DATA_WIDTH, CV_8UC1);
-		background = Scalar::all(0);
+		Mat result = Mat(DATA_HEIGHT, DATA_WIDTH, CV_8UC1);
+		result = Scalar::all(0);
 
 		Rect roi;
 		roi.width = modified_width;
@@ -200,8 +200,8 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 		roi.x = (DATA_WIDTH - modified_width) / 2;
 		roi.y = (DATA_HEIGHT - modified_height) / 2;
 
-		create_undetectable_background(background, object_cframe, object_binary, roi);
-		//
+		create_undetectable_background(result, object_cframe, object_binary, roi);
+		
 		
 		//Logic for undetectable background creation
 		
@@ -214,79 +214,86 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 
 void create_undetectable_background
 (
-	Mat& background, 
+	Mat& input_array, 
 	Mat& object_roi, 
 	Mat& binary_roi, 
 	Rect roi
 )noexcept
 {
 	
-	//Size variables 
-	const int rows = object_roi.rows;
-	const int cols = object_roi.cols;
-	const int offset = (DATA_HEIGHT - rows) / 2;
+	addWeighted(input_array(roi), 0, object_roi, 1, 0.0, input_array(roi));
 	
-	//Random number generator
-	default_random_engine e(random_device{}());
-	uniform_int_distribution<int> dist(-16, 16);
-	
-	//Pixel Storage 
-	vector<uchar> left;
-	vector<uchar> right;
+	////Size variables 
+	//const int rows = object_roi.rows;
+	//const int cols = object_roi.cols;
+	//const int offset = (DATA_HEIGHT - rows) / 2;
+	//
+	////Random number generator
+	//default_random_engine e(random_device{}());
+	//uniform_int_distribution<int> dist(-16, 16);
+	//
+	////Pixel Storage 
+	//vector<uchar> left;
+	//vector<uchar> right;
 
-	left.reserve(rows);
-	right.reserve(rows);
-	
-	for (int i = 0; i < rows; ++i) {
-		for (int j = 0; j < cols; ++j)
-			if (static_cast<int>(object_roi.at<uchar>(i, j)) != 0) {
-				left.emplace_back(object_roi.at<uchar>(i, j));
-				break;
-			}
-		for(int j = cols - 1; j >= 0; --j)
-			if(static_cast<int>(object_roi.at<uchar>(i, j)) != 0){
-				right.emplace_back(object_roi.at<uchar>(i, j));
-				break;
-			}
-	}
+	//left.reserve(rows);
+	//right.reserve(rows);
+	//
+	//for (int i = 0; i < rows; ++i) {
+	//	for (int j = 0; j < cols; ++j)
+	//		if (static_cast<int>(object_roi.at<uchar>(i, j)) != 0) {
+	//			left.emplace_back(object_roi.at<uchar>(i, j));
+	//			break;
+	//		}
+	//	for(int j = cols - 1; j >= 0; --j)
+	//		if(static_cast<int>(object_roi.at<uchar>(i, j)) != 0){
+	//			right.emplace_back(object_roi.at<uchar>(i, j));
+	//			break;
+	//		}
+	//}
 
-	int histogram[8] = { 0, 0, 0, 0,
-						 0, 0, 0, 0 };
-	int max_point = -1;
-	int max_value = -1;
-	const int scope = 16;
+	//int histogram[8] = { 0, 0, 0, 0,
+	//					 0, 0, 0, 0 };
+	//int max_point = -1;
+	//int max_value = -1;
+	//const int scope = 16;
 
-	for (auto& pixel : left)
-		++histogram[(static_cast<int>(pixel) / (scope * 2))];
+	//for (auto& pixel : left)
+	//	++histogram[(static_cast<int>(pixel) / (scope * 2))];
 
-	for (auto& pixel : right)
-		++histogram[(static_cast<int>(pixel) / (scope * 2))];
+	//for (auto& pixel : right)
+	//	++histogram[(static_cast<int>(pixel) / (scope * 2))];
 
-	for (int i = 0; i < 8; ++i) 
-		if (max_value < histogram[i]) {
-			max_value = histogram[i];
-			max_point = i;
-		}
+	//for (int i = 0; i < 8; ++i) 
+	//	if (max_value < histogram[i]) {
+	//		max_value = histogram[i];
+	//		max_point = i;
+	//	}
 
-	const int standard_value = max_point * scope * 2 + scope;
+	//const int standard_value = max_point * scope * 2 + scope;
 
-	for (int i = 0; i < left.size(); ++i) {
-		if ((static_cast<int>(left[i]) / (scope * 2) == max_point))
-			for (int j = 0; j < background.cols; ++j)
-				background.at<uchar>(offset + i, j) = left[i] + dist(e);
-		else 
-			for (int j = 0; j < background.cols; ++j)
-				background.at<uchar>(offset + i, j) = standard_value + dist(e);
-	}
-	
-	addWeighted(background(roi), 0, object_roi, 1, 0.0, background(roi));
-	
-	imshow("Confirm", background);
-	waitKey(10);
+	//for (int i = 0; i < left.size(); ++i) {
+	//	if ((static_cast<int>(left[i]) / (scope * 2) == max_point))
+	//		for (int j = 0; j < background.cols; ++j)
+	//			background.at<uchar>(offset + i, j) = left[i] + dist(e);
+	//	else 
+	//		for (int j = 0; j < background.cols; ++j)
+	//			background.at<uchar>(offset + i, j) = standard_value + dist(e);
+	//}
+	//
+	//addWeighted(background(roi), 0, object_roi, 1, 0.0, background(roi));
+	//
+	//imshow("Confirm", background);
+	//waitKey(10);
 
 }
 
-void expand_rect(Rect& rect, const int& pixel) noexcept {
+void expand_rect
+(
+	Rect& rect, 
+	const int& pixel
+)
+noexcept {
 
 	int x1 = rect.x;
 	int y1 = rect.y;
