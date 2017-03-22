@@ -5,7 +5,8 @@
 #include<fstream>
 #include<istream>
 #include<algorithm>
-#include<functional>
+#include<chrono>
+#include<random>
 
 #include<opencv2\core.hpp>
 #include<opencv2\imgproc.hpp>
@@ -98,7 +99,7 @@ public:
 
 //Mouse Callback function
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
-void create_undetectable_background(Mat& black_backgrounded, Mat& object_roi) noexcept;
+void create_undetectable_background(Mat& background, Mat& object_roi, Mat& binary_roi, Rect roi) noexcept;
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
 void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept;
@@ -199,12 +200,10 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 		roi.x = (DATA_WIDTH - modified_width) / 2;
 		roi.y = (DATA_HEIGHT - modified_height) / 2;
 
-		Mat background_roi = background(roi);
-
-		//addWeighted(background_roi, 0, object_cframe, 1, 0.0, black_backgrounded(roi));
+		create_undetectable_background(background, object_cframe, object_binary, roi);
+		//
 		
 		//Logic for undetectable background creation
-		create_undetectable_background(background, object_cframe);
 		
 
 		//imwrite(to_string(++material_count) + ".jpg", black_backgrounded);
@@ -213,11 +212,25 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 
 }
 
-void create_undetectable_background(Mat& background, Mat& object_roi) noexcept{
-
-	int rows = object_roi.rows;
-	int cols = object_roi.cols;
-
+void create_undetectable_background
+(
+	Mat& background, 
+	Mat& object_roi, 
+	Mat& binary_roi, 
+	Rect roi
+)noexcept
+{
+	
+	//Size variables 
+	const int rows = object_roi.rows;
+	const int cols = object_roi.cols;
+	const int offset = (DATA_HEIGHT - rows) / 2;
+	
+	//Random number generator
+	default_random_engine e(random_device{}());
+	uniform_int_distribution<int> dist(-16, 16);
+	
+	//Pixel Storage 
 	vector<uchar> left;
 	vector<uchar> right;
 
@@ -242,9 +255,9 @@ void create_undetectable_background(Mat& background, Mat& object_roi) noexcept{
 	int max_point = -1;
 	int max_value = -1;
 	const int scope = 16;
-	
+
 	for (auto& pixel : left)
-		++histogram[(static_cast<int>(pixel)/ (scope * 2))];
+		++histogram[(static_cast<int>(pixel) / (scope * 2))];
 
 	for (auto& pixel : right)
 		++histogram[(static_cast<int>(pixel) / (scope * 2))];
@@ -255,12 +268,22 @@ void create_undetectable_background(Mat& background, Mat& object_roi) noexcept{
 			max_point = i;
 		}
 
-	for(int i = 0; i < left.size())
+	const int standard_value = max_point * scope * 2 + scope;
+
+	for (int i = 0; i < left.size(); ++i) {
+		if ((static_cast<int>(left[i]) / (scope * 2) == max_point))
+			for (int j = 0; j < background.cols; ++j)
+				background.at<uchar>(offset + i, j) = left[i] + dist(e);
+		else 
+			for (int j = 0; j < background.cols; ++j)
+				background.at<uchar>(offset + i, j) = standard_value + dist(e);
+	}
 	
-	imshow("Confirm", object_roi);
+	addWeighted(background(roi), 0, object_roi, 1, 0.0, background(roi));
+	
+	imshow("Confirm", background);
 	waitKey(10);
 
-	
 }
 
 void expand_rect(Rect& rect, const int& pixel) noexcept {
@@ -286,8 +309,14 @@ void expand_rect(Rect& rect, const int& pixel) noexcept {
 	rect.height = y2 - y1;
 }
 
+void display_rects
+(
+	Mat& cframe, 
+	Mat& binary, 
+	vector<Rect>& rects
+)
 
-void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept {
+noexcept {
 
 	for (auto iter = rects.begin(); iter != rects.end();) {
 		Mat cframe_clone = cframe.clone();
@@ -303,7 +332,14 @@ void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept {
 	
 }
 
-void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept {
+void expand_object_roi
+(
+	Mat& cframe_gray, 
+	Mat& binary, 
+	vector<Rect>& rects, 
+	int scope
+)
+noexcept {
 	
 	for (auto iter = rects.begin(); iter != rects.end();) {		
 		if (iter->width <= 1 || iter->height <= 1) {
@@ -528,7 +564,12 @@ void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int s
 	}
 }
 
-void brend_color_and_binary(Mat& cframe, Mat& binary) {
+void brend_color_and_binary
+(
+	Mat& cframe, 
+	Mat& binary
+)
+{
 
 	for (int i = 0; i < binary.rows; ++i)
 		for (int j = 0; j < binary.cols; ++j)
