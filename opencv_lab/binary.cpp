@@ -220,8 +220,22 @@ void create_undetectable_background
 	Rect roi
 )
 noexcept{
-	
+
+	//Blend with black background
 	addWeighted(input_array(roi), 0, object_roi, 1, 0.0, input_array(roi));
+	
+	////DEBUG: Before random number creation
+	//vector<KeyPoint> keypoints;
+	//Mat descriptors;
+	//
+	//FAST(input_array, keypoints, 4);
+	//extractor->compute(input_array, keypoints, descriptors);
+	//Mat input_array_before = input_array.clone();
+	//drawKeypoints(input_array_before, keypoints, input_array_before);
+	//
+	//imshow("Before", input_array_before);
+	//moveWindow("Before", 0, 0);
+	//waitKey(10);
 	
 	//Size variables 
 	const int BACKGROUND_ROWS = input_array.rows;
@@ -232,7 +246,7 @@ noexcept{
 	const int OFFSET = (DATA_HEIGHT - OBJECT_ROWS) / 2;
 
 	//Data structures for BFS
-	queue<Point> search_points;
+	queue<Point> point_queue;
 	vector<vector<bool>> point_checker
 	(
 		BACKGROUND_ROWS, 
@@ -245,6 +259,11 @@ noexcept{
 				point_checker[i][j] = true;
 	
 	Point pointer = Point(BACKGROUND_COLS / 2, BACKGROUND_ROWS / 2);
+
+	//Random number generator
+	random_device random_device;
+	mt19937 mt(random_device());
+	uniform_int_distribution<int> range(-16, 16);
 
 	//Pixel storage 
 	vector<uchar> left;
@@ -287,17 +306,15 @@ noexcept{
 		}
 
 	const int STANDARD = max_point * (VALUE_SCOPE * 2) + VALUE_SCOPE;
-	const int STANDARD_MIN = STANDARD - (VALUE_SCOPE * 3);
-	const int STANDARD_MAX = STANDARD + (VALUE_SCOPE * 3);
+	const int STANDARD_MIN = STANDARD - (VALUE_SCOPE * 2);
+	const int STANDARD_MAX = STANDARD + (VALUE_SCOPE * 2);
 
 	//Find start point
-	bool find_start_point = false;
-
-	while (!find_start_point) {
+	while (point_queue.size() < 3) {
 		int x = pointer.x;
 		int y = pointer.y;
 
-		for (int i = -1; i <= 1; ++i) 
+		for (int i = 1; i >= -1; --i) 
 			for (int j = -1; j <= 1; ++j) {
 				if (i == 0 && j == 0)
 					continue;
@@ -310,20 +327,20 @@ noexcept{
 					continue;
 					
 				if (!point_checker[checked_y][checked_x]) {
- 					find_start_point = true;
-					point_checker[checked_y][checked_x] = true;
-					search_points.push(Point(checked_x, checked_y));
+ 					point_checker[checked_y][checked_x] = true;
+					point_queue.push(Point(checked_x, checked_y));
 				}
 			}
 		
 		pointer = Point(pointer.x, pointer.y - 1);
 	}	
 
+	int counter = 0;
 	//Search routine
-	while (!search_points.empty()) {
-
-		pointer = search_points.front();
-		search_points.pop();
+	while (!point_queue.empty()) {
+		
+		pointer = point_queue.front();
+		point_queue.pop();
 
 		int x = pointer.x;
 		int y = pointer.y;
@@ -354,11 +371,12 @@ noexcept{
 
 				if(!point_checker[checked_y][checked_x]){
 					point_checker[checked_y][checked_x] = true;
-					search_points.push(Point(checked_x, checked_y));
+					point_queue.push(Point(checked_x, checked_y));
 				}
 			}
 		}
 
+		
 		//Routine to get average
 		if (count != 0) {
 			int pixel_value = sum / count;
@@ -366,23 +384,34 @@ noexcept{
 			if (STANDARD_MIN <= pixel_value &&
 				pixel_value <= STANDARD_MAX)
 				input_array.at<uchar>(pointer.y, pointer.x) = pixel_value;
-			else
-				input_array.at<uchar>(pointer.y, pointer.x) = STANDARD;
+			else {
+				auto random_number = range(mt);
+				input_array.at<uchar>(pointer.y, pointer.x) = STANDARD + range(mt);
+			}
+		}
+
+		//If there are no points to search but not yet adjusted all
+		if (point_queue.empty() && !point_checker[0][0]){
+			while (true) {
+				pointer = Point(pointer.x, pointer.y + 1);
+				if (!point_checker[pointer.y + 1][pointer.x]){
+					point_queue.push(Point(pointer.x, pointer.y + 1));
+					break;
+				}
+			}
 		}
 	}
-	
-	vector<KeyPoint> keypoints;
-	Mat descriptors;
 
-	//검출 테스트
-	/*FAST(input_array, keypoints, 4);
-	extractor->compute(input_array, keypoints, descriptors);
-	drawKeypoints(input_array, keypoints, input_array);
-	*/
-	imshow("Confirm", input_array);
+	blur(input_array, input_array, Size(5, 5), Point(3, 3));
 
-	waitKey(10);
-
+	////DEBUG: After random background creation
+	//FAST(input_array, keypoints, 4);
+	//extractor->compute(input_array, keypoints, descriptors);
+	//Mat input_array_after = input_array.clone();
+	//drawKeypoints(input_array, keypoints, input_array);
+	//imshow("After", input_array);
+	//moveWindow("After", 240, 0);
+	//waitKey(10);
 }
 
 void expand_rect
