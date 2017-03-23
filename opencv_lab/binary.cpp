@@ -1,10 +1,10 @@
 #include<vector>
-#include<deque>
 #include<iostream>
 #include<windows.h>
 #include<fstream>
 #include<istream>
 #include<algorithm>
+#include<queue>
 #include<chrono>
 #include<random>
 
@@ -218,73 +218,170 @@ void create_undetectable_background
 	Mat& object_roi, 
 	Mat& binary_roi, 
 	Rect roi
-)noexcept
-{
+)
+noexcept{
 	
 	addWeighted(input_array(roi), 0, object_roi, 1, 0.0, input_array(roi));
 	
-	////Size variables 
-	//const int rows = object_roi.rows;
-	//const int cols = object_roi.cols;
-	//const int offset = (DATA_HEIGHT - rows) / 2;
-	//
-	////Random number generator
-	//default_random_engine e(random_device{}());
-	//uniform_int_distribution<int> dist(-16, 16);
-	//
-	////Pixel Storage 
-	//vector<uchar> left;
-	//vector<uchar> right;
+	//Size variables 
+	const int BACKGROUND_ROWS = input_array.rows;
+	const int BACKGROUND_COLS = input_array.cols;
 
-	//left.reserve(rows);
-	//right.reserve(rows);
-	//
-	//for (int i = 0; i < rows; ++i) {
-	//	for (int j = 0; j < cols; ++j)
-	//		if (static_cast<int>(object_roi.at<uchar>(i, j)) != 0) {
-	//			left.emplace_back(object_roi.at<uchar>(i, j));
-	//			break;
-	//		}
-	//	for(int j = cols - 1; j >= 0; --j)
-	//		if(static_cast<int>(object_roi.at<uchar>(i, j)) != 0){
-	//			right.emplace_back(object_roi.at<uchar>(i, j));
-	//			break;
-	//		}
-	//}
+	const int OBJECT_ROWS = object_roi.rows;
+	const int OBJECT_COLS = object_roi.cols;
+	const int OFFSET = (DATA_HEIGHT - OBJECT_ROWS) / 2;
 
-	//int histogram[8] = { 0, 0, 0, 0,
-	//					 0, 0, 0, 0 };
-	//int max_point = -1;
-	//int max_value = -1;
-	//const int scope = 16;
+	//Data structures for BFS
+	queue<Point> search_points;
+	vector<vector<bool>> point_checker
+	(
+		BACKGROUND_ROWS, 
+		vector<bool>(BACKGROUND_COLS, false)
+	);
+	
+	for (int i = 0; i < BACKGROUND_ROWS; ++i)
+		for (int j = 0; j < BACKGROUND_COLS; ++j)
+			if (input_array.at<uchar>(i, j) != 0)
+				point_checker[i][j] = true;
+	
+	Point pointer = Point(BACKGROUND_COLS / 2, BACKGROUND_ROWS / 2);
 
-	//for (auto& pixel : left)
-	//	++histogram[(static_cast<int>(pixel) / (scope * 2))];
+	//Pixel storage 
+	vector<uchar> left;
+	vector<uchar> right;
 
-	//for (auto& pixel : right)
-	//	++histogram[(static_cast<int>(pixel) / (scope * 2))];
+	left.reserve(OBJECT_ROWS);
+	right.reserve(OBJECT_ROWS);
+	
+	//Get max point
+	for (int i = 0; i < OBJECT_ROWS; ++i) {
+		for (int j = 0; j < OBJECT_COLS; ++j)
+			if (static_cast<int>(object_roi.at<uchar>(i, j)) != 0) {
+				left.emplace_back(object_roi.at<uchar>(i, j));
+				break;
+			}
+		for(int j = OBJECT_COLS - 1; j >= 0; --j)
+			if(static_cast<int>(object_roi.at<uchar>(i, j)) != 0){
+				right.emplace_back(object_roi.at<uchar>(i, j));
+				break;
+			}
+	}
 
-	//for (int i = 0; i < 8; ++i) 
-	//	if (max_value < histogram[i]) {
-	//		max_value = histogram[i];
-	//		max_point = i;
-	//	}
+	int histogram[8] = { 0, 0, 0, 0,
+						 0, 0, 0, 0 };
+	int max_point = -1;
+	int max_value = -1;
 
-	//const int standard_value = max_point * scope * 2 + scope;
+	const int VALUE_SCOPE = 16;
+	
+	for (auto& pixel : left)
+		++histogram[(static_cast<int>(pixel) / (VALUE_SCOPE * 2))];
 
-	//for (int i = 0; i < left.size(); ++i) {
-	//	if ((static_cast<int>(left[i]) / (scope * 2) == max_point))
-	//		for (int j = 0; j < background.cols; ++j)
-	//			background.at<uchar>(offset + i, j) = left[i] + dist(e);
-	//	else 
-	//		for (int j = 0; j < background.cols; ++j)
-	//			background.at<uchar>(offset + i, j) = standard_value + dist(e);
-	//}
-	//
-	//addWeighted(background(roi), 0, object_roi, 1, 0.0, background(roi));
-	//
-	//imshow("Confirm", background);
-	//waitKey(10);
+	for (auto& pixel : right)
+		++histogram[(static_cast<int>(pixel) / (VALUE_SCOPE * 2))];
+
+	for (int i = 0; i < 8; ++i) 
+		if (max_value < histogram[i]) {
+			max_value = histogram[i];
+			max_point = i;
+		}
+
+	const int STANDARD = max_point * (VALUE_SCOPE * 2) + VALUE_SCOPE;
+	const int STANDARD_MIN = STANDARD - (VALUE_SCOPE * 3);
+	const int STANDARD_MAX = STANDARD + (VALUE_SCOPE * 3);
+
+	//Find start point
+	bool find_start_point = false;
+
+	while (!find_start_point) {
+		int x = pointer.x;
+		int y = pointer.y;
+
+		for (int i = -1; i <= 1; ++i) 
+			for (int j = -1; j <= 1; ++j) {
+				if (i == 0 && j == 0)
+					continue;
+
+				int checked_x = x + i;
+				int checked_y = y + j;
+				
+				if (checked_x < 0 || BACKGROUND_COLS <= checked_x ||
+					checked_y < 0 || BACKGROUND_ROWS <= checked_y)
+					continue;
+					
+				if (!point_checker[checked_y][checked_x]) {
+ 					find_start_point = true;
+					point_checker[checked_y][checked_x] = true;
+					search_points.push(Point(checked_x, checked_y));
+				}
+			}
+		
+		pointer = Point(pointer.x, pointer.y - 1);
+	}	
+
+	//Search routine
+	while (!search_points.empty()) {
+
+		pointer = search_points.front();
+		search_points.pop();
+
+		int x = pointer.x;
+		int y = pointer.y;
+
+		int sum = 0;
+		int count = 0;
+
+		//Search 8-directions
+		for (int i = -1; i <= 1; ++i) {
+			for (int j = -1; j <= 1; ++j) {
+
+				if (i == 0 && j == 0)
+					continue;
+
+				int checked_x = x + i;
+				int checked_y = y + j;
+							
+				if (checked_x < 0 || BACKGROUND_COLS <= checked_x ||
+					checked_y < 0 || BACKGROUND_ROWS <= checked_y)
+					continue;
+				
+				auto current_pixel = static_cast<int>(input_array.at<uchar>(checked_y, checked_x));
+
+				if (current_pixel != 0) {
+					sum += current_pixel;
+					++count;
+				}
+
+				if(!point_checker[checked_y][checked_x]){
+					point_checker[checked_y][checked_x] = true;
+					search_points.push(Point(checked_x, checked_y));
+				}
+			}
+		}
+
+		//Routine to get average
+		if (count != 0) {
+			int pixel_value = sum / count;
+
+			if (STANDARD_MIN <= pixel_value &&
+				pixel_value <= STANDARD_MAX)
+				input_array.at<uchar>(pointer.y, pointer.x) = pixel_value;
+			else
+				input_array.at<uchar>(pointer.y, pointer.x) = STANDARD;
+		}
+	}
+	
+	vector<KeyPoint> keypoints;
+	Mat descriptors;
+
+	//검출 테스트
+	/*FAST(input_array, keypoints, 4);
+	extractor->compute(input_array, keypoints, descriptors);
+	drawKeypoints(input_array, keypoints, input_array);
+	*/
+	imshow("Confirm", input_array);
+
+	waitKey(10);
 
 }
 
