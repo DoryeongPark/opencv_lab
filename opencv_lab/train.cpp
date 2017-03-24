@@ -18,12 +18,10 @@ using namespace xfeatures2d;
 using namespace ml;
 namespace fs = experimental::filesystem;
 
-int DATA_WIDTH = 240;
-int DATA_HEIGHT = 320;
+const int DATA_WIDTH = 120;
+const int DATA_HEIGHT = 160;
 
-/*
-	Allocate increment number for the directory files
-*/
+//	Allocate increment number for the directory files
 void number_files(const fs::path& dir_path)
 {
 	vector<string> file_names;
@@ -41,22 +39,24 @@ void number_files(const fs::path& dir_path)
 		{
 			continue;
 		}
+
 		file_names.push_back(iter->path().string().substr(dir_path.string().size() + 1));
 	}
 
 	for (int i = 0; i < file_names.size(); ++i) {
-
 		string old_name = dir_path.string() + "//" + file_names.at(i);
 		string new_name = dir_path.string() + "//" + to_string(i) + ".jpg";
 		rename(old_name.c_str(), new_name.c_str());
-
 	}
 }
 
-/*
-	Normalize keypoints as size
-*/
-void normalize_keypoints(vector<KeyPoint>& keypoints, int size) {
+//	Normalize keypoints as size
+void normalize_keypoints
+(
+	vector<KeyPoint>& keypoints, 
+	int size
+) 
+{
 	
 	if (keypoints.size() <= size)
 		return;
@@ -69,15 +69,12 @@ void normalize_keypoints(vector<KeyPoint>& keypoints, int size) {
 	copy.reserve(keypoints.size());
 
 	while (counter != size) {
-
 		int index = static_cast<int>(interval * (float)counter);
 		copy.emplace_back(keypoints[index]);
 		++counter;
-
 	}
 
 	keypoints = copy;
-
 }
 
 void main() {
@@ -101,17 +98,27 @@ void main() {
 			continue;
 		}
 		
-		Mat img = imread(nn.str());
-		
-		FAST(img, keypoints, 4);
-		//normalize_keypoints(keypoints, 15);
-		
-		extractor->compute(img, keypoints, descriptors);
+		Mat train_x = imread(nn.str());
+		cvtColor(train_x, train_x, CV_BGR2GRAY);
 
-		drawKeypoints(img, keypoints, img);
-		imshow("Training Data", img);
+		FAST(train_x, keypoints, 4);
+
+		//DEBUG: Before normalization
+		Mat train_x_before_norm = train_x.clone();
+		drawKeypoints(train_x_before_norm, keypoints, train_x_before_norm);
+		imshow("Original Keypoints", train_x_before_norm);
+		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
+		//DEBUG: After normalizations
+		normalize_keypoints(keypoints, 15);
+		Mat train_x_after_norm = train_x.clone();
+		drawKeypoints(train_x_after_norm, keypoints, train_x_after_norm);
+		imshow("Normalized Keypoints", train_x_after_norm);
+		moveWindow("Normalized Keypoints", 160, 0);
+		waitKey(10);
+		
+		extractor->compute(train_x, keypoints, descriptors);
 		descriptors = descriptors.reshape(1, 1);
 		
 		try {
@@ -119,7 +126,7 @@ void main() {
 			groups.push_back(0);
 		}
 		catch (Exception e) {
-			cout << "Remove - " + nn.str() << endl;
+			cout << "Exception - " + nn.str() << endl;
 		}
 
 		keypoints.clear();

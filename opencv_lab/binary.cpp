@@ -1,12 +1,10 @@
-#include<vector>
 #include<iostream>
 #include<windows.h>
 #include<fstream>
 #include<istream>
 #include<algorithm>
 #include<queue>
-#include<chrono>
-#include<random>
+#include<vector>
 
 #include<opencv2\core.hpp>
 #include<opencv2\imgproc.hpp>
@@ -28,10 +26,9 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
-int material_count = 200;
+int material_count = 0;
 
 //ORB Detector & SURF extractor
-Ptr<ORB> detector = ORB::create(15, 1.2f, 15, 10, 0, 2, ORB::HARRIS_SCORE, 31, 20);
 Mat descriptor;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = SVM::create();
@@ -172,10 +169,10 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 	for (Rect& rect : final_rects) {
 		int width = rect.width;
 		int height = rect.height;
-		float ratio = ((float)DATA_HEIGHT / 1.5f) / (float)height;
+		float ratio = ((float)DATA_HEIGHT / 1.2f) / (float)height;
 
 		int modified_width = (int)((float)rect.width * ratio);
-		int modified_height = (int)((float)DATA_HEIGHT / 1.5f);
+		int modified_height = (int)((float)DATA_HEIGHT / 1.2f);
 
 		if (modified_width > DATA_WIDTH)
 			continue;
@@ -222,7 +219,7 @@ noexcept{
 	//vector<KeyPoint> keypoints;
 	//Mat descriptors;
 	//
-	//FAST(input_array, keypoints, 5);
+	//FAST(input_array, keypoints, 4);
 	//extractor->compute(input_array, keypoints, descriptors);
 	//Mat input_array_before = input_array.clone();
 	//drawKeypoints(input_array_before, keypoints, input_array_before);
@@ -241,6 +238,7 @@ noexcept{
 
 	//Data structures for BFS
 	queue<Point> point_queue;
+
 	vector<vector<bool>> point_checker
 	(
 		BACKGROUND_ROWS, 
@@ -388,7 +386,7 @@ noexcept{
 		}
 	}
 
-	Mat blurring_kernel = (
+	/*Mat blurring_kernel = (
 								Mat_<char>(5, 5) <<
 								1, 1, 1, 1, 1,
 								1, 1, 1, 1, 1,
@@ -404,12 +402,12 @@ noexcept{
 		input_array, 
 		input_array.depth(), 
 		blurring_kernel
-	);
+	);*/
 
-	//blur(input_array, input_array, Size(5, 5), Point(3, 3));
+	blur(input_array, input_array, Size(5, 5), Point(3, 3));
 
 	////DEBUG: After random background creation
-	//FAST(input_array, keypoints, 5);
+	//FAST(input_array, keypoints, 4);
 	//extractor->compute(input_array, keypoints, descriptors);
 	//Mat input_array_after = input_array.clone();
 	//drawKeypoints(input_array, keypoints, input_array);
