@@ -31,7 +31,7 @@ int material_count = 0;
 //ORB Detector & SURF extractor
 Mat descriptor;
 Ptr<SURF> extractor = SURF::create();
-Ptr<SVM> classifier = SVM::create();
+Ptr<SVM> classifier = Algorithm::load<SVM>("classifier.yml");
 
 Mat groups;
 Mat samples;
@@ -98,9 +98,16 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param);
 void create_undetectable_background(Mat& background, Mat& object_roi, Rect roi) noexcept;
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
-void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept;
 
-void on_mouse(int callback_event, int x, int y, int flags, void* param) {
+void on_mouse
+(
+	int callback_event, 
+	int x, 
+	int y, 
+	int flags, 
+	void* param
+)
+{
 
 	Cropper* cropper = (Cropper*)param;
 
@@ -139,69 +146,135 @@ void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 	}
 }
 
-//Get area which has maximum points - Can be deprecated
-int get_max_area8(Mat histogram) noexcept {
+//	Normalize keypoints as size
+void normalize_keypoints
+(
+	vector<KeyPoint>& keypoints,
+	const int& size
+)
+{
 
-	int area_number = 0;
-	int max_area_number = 0;
-	float current_pixel_total = 0;
-	float max_pixel_total = 0;
+	if (keypoints.size() <= size)
+		return;
 
-	for (int i = 0; i < histogram.rows; ++i) {
-		if (i % 32 == 0 && i != 0) {
-			if (current_pixel_total > max_pixel_total) {
-				max_pixel_total = current_pixel_total;
-				max_area_number = area_number;
-			}
-			++area_number;
-			current_pixel_total = 0;
-		}
-		float current_pixel = histogram.at<float>(i, 0);
-		current_pixel_total += current_pixel;
+	int current_size = keypoints.size();
+	int counter = 0;
+	float interval = static_cast<float>(current_size) / size;
+
+	vector<KeyPoint> copy;
+	copy.reserve(keypoints.size());
+
+	while (counter != size) {
+		int index = static_cast<int>(interval * (float)counter);
+		copy.emplace_back(keypoints[index]);
+		++counter;
 	}
 
-	return max_area_number * 32;
+	keypoints = copy;
+}
+
+Mat& refine_data
+(
+	Mat& cframe,
+	Mat& cframe_gray,
+	Mat& binary,
+	Rect& rect,
+	Mat& result
+) 
+noexcept {
+
+	int width = rect.width;
+	int height = rect.height;
+	float ratio = ((float)DATA_HEIGHT / 1.2f) / (float)height;
+
+	int modified_width = (int)((float)rect.width * ratio);
+	int modified_height = (int)((float)DATA_HEIGHT / 1.2f);
+
+	if (modified_width > DATA_WIDTH)
+		return Mat();
+
+	Mat object_cframe = cframe_gray(rect);
+	Mat object_binary = binary(rect);
+
+	resize(object_cframe, object_cframe, Size(modified_width, modified_height), 0, 0, CV_INTER_CUBIC);
+	resize(object_binary, object_binary, Size(modified_width, modified_height), 0, 0, CV_INTER_AREA);
+
+	threshold(object_binary, object_binary, 0, 1, CV_THRESH_BINARY);
+	object_cframe = object_cframe.mul(object_binary);
+
+	result = Mat(DATA_HEIGHT, DATA_WIDTH, CV_8UC1);
+	result = Scalar::all(0);
+
+	Rect roi;
+
+	roi.width = modified_width;
+	roi.height = modified_height;
+	roi.x = static_cast<int>((float)(DATA_WIDTH - modified_width) / 2);
+	roi.y = static_cast<int>((float)(DATA_HEIGHT - modified_height) / 2);
+
+	create_undetectable_background(result, object_cframe, roi);
+
+	imshow("Check", result);
+	waitKey(10);
 
 }
 
-void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rect>& final_rects) noexcept {
+void save_objects_as_file
+(
+	Mat& cframe,
+	Mat& cframe_gray,
+	Mat& binary,
+	vector<Rect>& final_rects
+)
+noexcept {
 
 	for (Rect& rect : final_rects) {
-		int width = rect.width;
-		int height = rect.height;
-		float ratio = ((float)DATA_HEIGHT / 1.2f) / (float)height;
 
-		int modified_width = (int)((float)rect.width * ratio);
-		int modified_height = (int)((float)DATA_HEIGHT / 1.2f);
+		Mat result;
 
-		if (modified_width > DATA_WIDTH)
+		refine_data(cframe, cframe_gray, binary, rect, result);
+		
+		if (result.empty())
 			continue;
 
-		Mat object_cframe = cframe_gray(rect);
-		Mat object_binary = binary(rect);
-
-		resize(object_cframe, object_cframe, Size(modified_width, modified_height), 0, 0, CV_INTER_CUBIC);
-		resize(object_binary, object_binary, Size(modified_width, modified_height), 0, 0, CV_INTER_AREA);
-
-		threshold(object_binary, object_binary, 0, 1, CV_THRESH_BINARY);
-		object_cframe = object_cframe.mul(object_binary);
-
-		Mat result = Mat(DATA_HEIGHT, DATA_WIDTH, CV_8UC1);
-		result = Scalar::all(0);
-
-		Rect roi;
-		roi.width = modified_width;
-		roi.height = modified_height;
-		roi.x = static_cast<int>((float)(DATA_WIDTH - modified_width) / 2);
-		roi.y = static_cast<int>((float)(DATA_HEIGHT - modified_height) / 2);
-
-		//Logic for undetectable background creation
-		create_undetectable_background(result, object_cframe, roi);
-		
 		imwrite(to_string(++material_count) + ".jpg", result);
-
 	}
 
+}
+
+
+void classify
+(
+	Mat& cframe_gray,
+	vector<Rect>& final_rects
+)
+noexcept {
+
+	for_each(
+		final_rects.begin(), 
+		final_rects.end(), 
+		[&](Rect& rect)->void
+	{
+		Mat& candidate = cframe_gray(rect);
+		keypoints.clear();
+		FAST(candidate, keypoints, 4);
+		if (keypoints.size() != 15)
+			return;
+		extractor->compute(candidate, keypoints, descriptor);
+		auto result = classifier->predict(descriptor);
+		
+		if (result == 1.0f) {
+			cout << "CORRECT" << endl;
+		}
+		else {
+			cout << "NOT CORRECT" << endl;
+		}
+
+		imshow("Candidate", candidate);
+		moveWindow("Candidate", 0, 0);
+		waitKey(10);
+
+	});
 }
 
 void create_undetectable_background
@@ -468,237 +541,6 @@ noexcept {
 	
 }
 
-void expand_object_roi
-(
-	Mat& cframe_gray, 
-	Mat& binary, 
-	vector<Rect>& rects, 
-	int scope
-)
-noexcept {
-	
-	for (auto iter = rects.begin(); iter != rects.end();) {		
-		if (iter->width <= 1 || iter->height <= 1) {
-			++iter;
-			continue;
-		}
-
-		Mat roi_gray = cframe_gray(*iter);
-		Mat roi_binary = binary(*iter);
-
-		int roi_x = iter->x;
-		int roi_y = iter->y;
-		int roi_width = iter->width;
-		int roi_height = iter->height;
-		
-		Mat histogram;
-		const int* channel_numbers = { 0 };
-		float channel_range[] = { 0, 256 };
-		const float* channel_ranges = channel_range;
-		int hist_size = 256;
-
-		//Calculate TOP 1 scope
-		calcHist(&roi_gray, 1, channel_numbers, Mat(), histogram, 1, &hist_size, &channel_ranges);
-		int min_scope = get_max_area8(histogram);
-	
-		//-----------------------------------------------------------------------------------
-		//DEBUG - This code is to show improvement of cropping entire part [Before Extension]
-		//-----------------------------------------------------------------------------------
-
-		destroyWindow("Before Extension");
-		imshow("Before Extension", cframe_gray(*iter));
-		waitKey(10);
-		cout << "Before Extension" << endl;
-		cout << "---------------" << endl;
-		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
-		cout << "Width: " << iter->width << endl;
-		cout << "Height: " << iter->height << endl;
-		cout << "---------------" << endl << endl;
-
-		vector<int> index_vector;
-
-		//Left Extension
-		Mat left_mat_gray = roi_gray(Rect(0, 0, 1, roi_height));
-
-		for (int i = 0; i < left_mat_gray.rows; ++i)
-			index_vector.emplace_back(i);
-		int idx_count = index_vector.size();
-		
-		while(idx_count != 0) {
-			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(left_mat_gray.at<uchar>(index_vector.at(i), 0));
-				if (min_scope <= current_px && current_px < min_scope + 32) {
-					index_vector.emplace_back(i);
-					if (0 <= i - 1)
-						index_vector.emplace_back(i - 1);
-					if(i + 1 < idx_count)
-						index_vector.emplace_back(i + 1);
-				}
-			}
-			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end());
-			auto cut_point = unique(index_vector.begin(), index_vector.end());
-			index_vector.erase(cut_point, index_vector.end());
-			idx_count = index_vector.size();
-			if (idx_count != 0) {
-				if (roi_x == 0)
-					break;
-				*iter = Rect(--roi_x, roi_y, ++roi_width, roi_height);
-				roi_gray = cframe_gray(*iter);
-				
-				//Reflect indexes to binary image
-				roi_binary = binary(*iter);
-				for (auto index : index_vector)
-					roi_binary.at<uchar>(index, 0) = 255;
-
-				left_mat_gray = roi_gray(Rect(0, 0, 1, roi_height));
-			}
-		}
-
-		index_vector.clear();
-
-		//Right Extension
-		Mat right_mat = roi_gray(Rect(roi_width - 2, 0, 1, roi_height));
-
-		for (int i = 0; i < right_mat.rows; ++i)
-			index_vector.emplace_back(i);
-		idx_count = index_vector.size();
-
-		while (idx_count != 0) {
-			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(right_mat.at<uchar>(index_vector.at(i), 0));
-				if (min_scope <= current_px && current_px < min_scope + 32) {
-					index_vector.emplace_back(i);
-					if (0 <= i - 1)
-						index_vector.emplace_back(i - 1);
-					if (i + 1 < idx_count)
-						index_vector.emplace_back(i + 1);
-				}
-			}
-			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end());
-			auto cut_point = unique(index_vector.begin(), index_vector.end());
-			index_vector.erase(cut_point, index_vector.end());
-			idx_count = index_vector.size();
-			if (idx_count != 0) {
-				if (roi_x + roi_width == cframe_gray.cols)
-					break;
-				*iter = Rect(roi_x, roi_y, ++roi_width, roi_height);
-				roi_gray = cframe_gray(*iter);
-				
-				////Reflect indexes to binary image
-				//roi_binary = binary(*iter);
-				//for (auto index : index_vector)
-				//	roi_binary.at<uchar>(index, roi_x + roi_width - 1) = 255;
-
-				right_mat = roi_gray(Rect(roi_width - 2, 0, 1, roi_height));
-			}
-		}
-		
-		index_vector.clear();
-
-		//Top Extension
-		Mat top_mat = roi_gray(Rect(0, 0, roi_width, 1));
-
-		for (int i = 0; i < top_mat.rows; ++i)
-			index_vector.emplace_back(i);
-		idx_count = index_vector.size();
-
-		while (idx_count != 0) {
-			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(top_mat.at<uchar>(0, index_vector.at(i)));
-				if (min_scope <= current_px && current_px < min_scope + 32) {
-					index_vector.emplace_back(i);
-					if (0 <= i - 1)
-						index_vector.emplace_back(i - 1);
-					if (i + 1 < idx_count)
-						index_vector.emplace_back(i + 1);
-				}
-			}
-			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end());
-			auto cut_point = unique(index_vector.begin(), index_vector.end());
-			index_vector.erase(cut_point, index_vector.end());
-			idx_count = index_vector.size();
-			if (idx_count != 0) {
-				if (roi_y == 0)
-					break;
-				*iter = Rect(roi_x, --roi_y, roi_width, ++roi_height);
-				roi_gray = cframe_gray(*iter);
-
-				////Reflect indexes to binary image
-				//roi_binary = binary(*iter);
-				//for (auto index : index_vector)
-				//	roi_binary.at<uchar>(0, index) = 255;
-
-				top_mat = roi_gray(Rect(0, 0, roi_width, 1));
-			}
-		}
-
-		index_vector.clear();
-
-		//Bottom Extension
-		Mat bot_mat = roi_gray(Rect(0, roi_height - 2, roi_width, 1));
-
-		for (int i = 0; i < bot_mat.rows; ++i)
-			index_vector.emplace_back(i);
-		idx_count = index_vector.size();
-
-		while (idx_count != 0) {
-			for (int i = 0; i < idx_count; ++i) {
-				float current_px = static_cast<float>(bot_mat.at<uchar>(0, index_vector.at(i)));
-				if (min_scope <= current_px && current_px < min_scope + 32) {
-					index_vector.emplace_back(i);
-					if (0 <= i - 1)
-						index_vector.emplace_back(i - 1);
-					if (i + 1 < idx_count)
-						index_vector.emplace_back(i + 1);
-				}
-			}
-			index_vector.erase(index_vector.begin(), index_vector.begin() + idx_count);
-			sort(index_vector.begin(), index_vector.end());
-			auto cut_point = unique(index_vector.begin(), index_vector.end());
-			index_vector.erase(cut_point, index_vector.end());
-			idx_count = index_vector.size();
-			if (idx_count != 0) {
-				if (roi_y == 0)
-					break;
-				*iter = Rect(roi_x, roi_y, roi_width, ++roi_height);
-				roi_gray = cframe_gray(*iter);
-				
-				////Reflect indexes to binary image
-				//roi_binary = binary(*iter);
-				//for (auto index : index_vector)
-				//	roi_binary.at<uchar>(roi_y + roi_height - 1, index) = 1;
-
-				bot_mat = roi_gray(Rect(0, roi_height - 2, roi_width, 1));
-			}
-		}
-
-		index_vector.clear();
-
-		//-----------------------------------------------------------------------------------
-		//DEBUG - This code is to show improvement of cropping entire part [After Extension]
-		//-----------------------------------------------------------------------------------
-
-		destroyWindow("After Extension");
-		imshow("After Extension", cframe_gray(*iter));
-		waitKey(10);
-		cout << "After Extension" << endl;
-		cout << "---------------" << endl;
-		cout << "x: " << iter->x << " " << "y: " << iter->y << " " << endl;
-		cout << "Width: " << iter->width << endl;
-		cout << "Height: " << iter->height << endl;
-		cout << "---------------" << endl << endl;
-
-		/*expand_rect(*iter, 2);
-		rectangle(binary, *iter, Scalar{ 255 });
-		imshow("Binary", binary);
-		waitKey(10);*/
-
-		++iter;
-	}
-}
 
 void brend_color_and_binary
 (
@@ -719,7 +561,7 @@ void brend_color_and_binary
 
 int main() {
 
-	cout << "Object Counting Application [Demo version] - Made by Doryeong Park" << endl;
+	cout << "People Counting Application [Demo version] - Made by Doryeong Park" << endl;
 
 init:
 

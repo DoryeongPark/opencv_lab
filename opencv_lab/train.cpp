@@ -22,7 +22,10 @@ const int DATA_WIDTH = 120;
 const int DATA_HEIGHT = 160;
 
 //	Allocate increment number for the directory files
-void number_files(const fs::path& dir_path)
+void number_files
+(
+	const fs::path& dir_path
+)
 {
 	vector<string> file_names;
 
@@ -54,7 +57,7 @@ void number_files(const fs::path& dir_path)
 void normalize_keypoints
 (
 	vector<KeyPoint>& keypoints, 
-	int size
+	const int size
 ) 
 {
 	
