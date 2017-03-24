@@ -20,8 +20,8 @@ static bool b_flag = false;
 constexpr int WIDTH = 400;
 constexpr int HEIGHT = 300;
 
-constexpr int DATA_WIDTH = 240;
-constexpr int DATA_HEIGHT = 320;
+constexpr int DATA_WIDTH = 120;
+constexpr int DATA_HEIGHT = 160;
 
 using namespace std;
 using namespace cv;
@@ -97,13 +97,11 @@ public:
 
 };
 
-//Mouse Callback function
 void on_mouse(int callback_event, int x, int y, int flags, void* param);
-void create_undetectable_background(Mat& background, Mat& object_roi, Mat& binary_roi, Rect roi) noexcept;
+void create_undetectable_background(Mat& background, Mat& object_roi, Rect roi) noexcept;
 void expand_rect(Rect& rect, const int& pixel) noexcept;
 void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
 void expand_object_roi(Mat& cframe_gray, Mat& binary, vector<Rect>& rects, int scope) noexcept;
-
 
 void on_mouse(int callback_event, int x, int y, int flags, void* param) {
 
@@ -174,10 +172,10 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 	for (Rect& rect : final_rects) {
 		int width = rect.width;
 		int height = rect.height;
-		float ratio = (float)(DATA_HEIGHT / 2) / (float)height;
+		float ratio = ((float)DATA_HEIGHT / 1.5f) / (float)height;
 
 		int modified_width = (int)((float)rect.width * ratio);
-		int modified_height = DATA_HEIGHT / 2;
+		int modified_height = (int)((float)DATA_HEIGHT / 1.5f);
 
 		if (modified_width > DATA_WIDTH)
 			continue;
@@ -197,16 +195,13 @@ void save_objects_as_file(Mat& cframe, Mat& cframe_gray, Mat& binary, vector<Rec
 		Rect roi;
 		roi.width = modified_width;
 		roi.height = modified_height;
-		roi.x = (DATA_WIDTH - modified_width) / 2;
-		roi.y = (DATA_HEIGHT - modified_height) / 2;
+		roi.x = static_cast<int>((float)(DATA_WIDTH - modified_width) / 2);
+		roi.y = static_cast<int>((float)(DATA_HEIGHT - modified_height) / 2);
 
-		create_undetectable_background(result, object_cframe, object_binary, roi);
-		
-		
 		//Logic for undetectable background creation
+		create_undetectable_background(result, object_cframe, roi);
 		
-
-		//imwrite(to_string(++material_count) + ".jpg", black_backgrounded);
+		imwrite(to_string(++material_count) + ".jpg", result);
 
 	}
 
@@ -216,7 +211,6 @@ void create_undetectable_background
 (
 	Mat& input_array, 
 	Mat& object_roi, 
-	Mat& binary_roi, 
 	Rect roi
 )
 noexcept{
@@ -228,7 +222,7 @@ noexcept{
 	//vector<KeyPoint> keypoints;
 	//Mat descriptors;
 	//
-	//FAST(input_array, keypoints, 4);
+	//FAST(input_array, keypoints, 5);
 	//extractor->compute(input_array, keypoints, descriptors);
 	//Mat input_array_before = input_array.clone();
 	//drawKeypoints(input_array_before, keypoints, input_array_before);
@@ -239,7 +233,7 @@ noexcept{
 	
 	//Size variables 
 	const int BACKGROUND_ROWS = input_array.rows;
-	const int BACKGROUND_COLS = input_array.cols;
+ 	const int BACKGROUND_COLS = input_array.cols;
 
 	const int OBJECT_ROWS = object_roi.rows;
 	const int OBJECT_COLS = object_roi.cols;
@@ -259,11 +253,6 @@ noexcept{
 				point_checker[i][j] = true;
 	
 	Point pointer = Point(BACKGROUND_COLS / 2, BACKGROUND_ROWS / 2);
-
-	//Random number generator
-	random_device random_device;
-	mt19937 mt(random_device());
-	uniform_int_distribution<int> range(-16, 16);
 
 	//Pixel storage 
 	vector<uchar> left;
@@ -335,7 +324,6 @@ noexcept{
 		pointer = Point(pointer.x, pointer.y - 1);
 	}	
 
-	int counter = 0;
 	//Search routine
 	while (!point_queue.empty()) {
 		
@@ -376,7 +364,6 @@ noexcept{
 			}
 		}
 
-		
 		//Routine to get average
 		if (count != 0) {
 			int pixel_value = sum / count;
@@ -385,12 +372,11 @@ noexcept{
 				pixel_value <= STANDARD_MAX)
 				input_array.at<uchar>(pointer.y, pointer.x) = pixel_value;
 			else {
-				auto random_number = range(mt);
-				input_array.at<uchar>(pointer.y, pointer.x) = STANDARD + range(mt);
+				input_array.at<uchar>(pointer.y, pointer.x) = STANDARD;
 			}
 		}
 
-		//If there are no points to search but not yet adjusted all
+		//If there are no points to search but not yet searched all
 		if (point_queue.empty() && !point_checker[0][0]){
 			while (true) {
 				pointer = Point(pointer.x, pointer.y + 1);
@@ -402,16 +388,35 @@ noexcept{
 		}
 	}
 
-	blur(input_array, input_array, Size(5, 5), Point(3, 3));
+	Mat blurring_kernel = (
+								Mat_<char>(5, 5) <<
+								1, 1, 1, 1, 1,
+								1, 1, 1, 1, 1,
+								1, 1, 1, 1, 1,
+								1, 1, 1, 1, 1,
+								1, 1, 1, 1, 1
+						  );
+	Mat cloned_input_array = input_array.clone();
+	
+	filter2D
+	(
+		cloned_input_array, 
+		input_array, 
+		input_array.depth(), 
+		blurring_kernel
+	);
+
+	//blur(input_array, input_array, Size(5, 5), Point(3, 3));
 
 	////DEBUG: After random background creation
-	//FAST(input_array, keypoints, 4);
+	//FAST(input_array, keypoints, 5);
 	//extractor->compute(input_array, keypoints, descriptors);
 	//Mat input_array_after = input_array.clone();
 	//drawKeypoints(input_array, keypoints, input_array);
 	//imshow("After", input_array);
 	//moveWindow("After", 240, 0);
 	//waitKey(10);
+
 }
 
 void expand_rect
