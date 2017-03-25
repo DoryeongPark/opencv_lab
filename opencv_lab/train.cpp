@@ -16,9 +16,10 @@ using namespace std;
 using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
+
 namespace fs = experimental::filesystem;
 
-const int DATA_WIDTH = 120;
+const int DATA_WIDTH = 160;
 const int DATA_HEIGHT = 160;
 
 //	Allocate increment number for the directory files
@@ -104,7 +105,7 @@ void main() {
 		Mat train_x = imread(nn.str());
 		cvtColor(train_x, train_x, CV_BGR2GRAY);
 
-		FAST(train_x, keypoints, 4);
+		FAST(train_x, keypoints, 3);
 
 		//DEBUG: Before normalization
 		Mat train_x_before_norm = train_x.clone();
@@ -113,8 +114,9 @@ void main() {
 		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
+		normalize_keypoints(keypoints, 22);
+		
 		//DEBUG: After normalizations
-		normalize_keypoints(keypoints, 15);
 		Mat train_x_after_norm = train_x.clone();
 		drawKeypoints(train_x_after_norm, keypoints, train_x_after_norm);
 		imshow("Normalized Keypoints", train_x_after_norm);
@@ -123,7 +125,8 @@ void main() {
 		
 		extractor->compute(train_x, keypoints, descriptors);
 		descriptors = descriptors.reshape(1, 1);
-		
+		cout << descriptors.cols << endl;
+
 		try {
 			samples.push_back(descriptors);
 			groups.push_back(0);
@@ -141,16 +144,17 @@ void main() {
 	classifierSVM->setType(SVM::ONE_CLASS);
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
+	classifierSVM->setNu(0.1);
 	classifierSVM->setGamma(0.1);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setC(1);
-	classifierSVM->setNu(0.1);
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,
 		500, FLT_EPSILON));
-
 	classifierSVM->train(samples, ml::ROW_SAMPLE, groups);
+	
 	classifierSVM->save("classifier.yml");
 
 	waitKey(10);
+
 }

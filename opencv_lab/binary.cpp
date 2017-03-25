@@ -18,7 +18,7 @@ static bool b_flag = false;
 constexpr int WIDTH = 400;
 constexpr int HEIGHT = 300;
 
-constexpr int DATA_WIDTH = 120;
+constexpr int DATA_WIDTH = 160;
 constexpr int DATA_HEIGHT = 160;
 
 using namespace std;
@@ -26,7 +26,7 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
-int material_count = 0;
+int material_count = 500;
 
 //ORB Detector & SURF extractor
 Mat descriptor;
@@ -213,8 +213,6 @@ noexcept {
 	roi.y = static_cast<int>((float)(DATA_HEIGHT - modified_height) / 2);
 
 	create_undetectable_background(result, object_cframe, roi);
-
-	imshow("Check", result);
 	waitKey(10);
 
 }
@@ -245,36 +243,57 @@ noexcept {
 
 void classify
 (
+	Mat& cframe,
 	Mat& cframe_gray,
+	Mat& binary,
 	vector<Rect>& final_rects
 )
 noexcept {
 
-	for_each(
+	int counter = 0;
+
+	for_each
+	(
 		final_rects.begin(), 
 		final_rects.end(), 
 		[&](Rect& rect)->void
 	{
-		Mat& candidate = cframe_gray(rect);
 		keypoints.clear();
-		FAST(candidate, keypoints, 4);
-		if (keypoints.size() != 15)
+
+		Mat candidate;
+
+		refine_data(cframe, cframe_gray, binary, rect, candidate);
+
+		if (candidate.empty())
 			return;
+		
+		FAST(candidate, keypoints, 3);
+		normalize_keypoints(keypoints, 22);
+
+		if (keypoints.size() != 22)
+			return;
+
 		extractor->compute(candidate, keypoints, descriptor);
+		descriptor = descriptor.reshape(1, 1);
+		
 		auto result = classifier->predict(descriptor);
 		
 		if (result == 1.0f) {
-			cout << "CORRECT" << endl;
+			putText(candidate, "CORRECT", Point(7, 10), 3, 0.25, Scalar(255));
+			++counter;
 		}
 		else {
-			cout << "NOT CORRECT" << endl;
+			putText(candidate, "NOT CORRECT", Point(7, 10), 3, 0.25, Scalar(255));
 		}
 
 		imshow("Candidate", candidate);
 		moveWindow("Candidate", 0, 0);
 		waitKey(10);
 
-	});
+	}
+	);
+	
+	cout << counter << " People detected" << endl;
 }
 
 void create_undetectable_background
@@ -671,6 +690,10 @@ init:
 		//S key - Save all objects as jpg file
 		if (ch == 115 || ch == 83)
 			save_objects_as_file(cframe, cframe_gray, binary, bounded_rects);
+
+		//C key - Test classification
+		if (ch == 67 || ch == 99)
+			classify(cframe, cframe_gray, binary, bounded_rects);
 		
 		//Space key
 		if (ch == 32) {
