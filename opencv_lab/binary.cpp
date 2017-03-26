@@ -26,7 +26,7 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
-int material_count = 500;
+int material_count = 1300;
 
 //ORB Detector & SURF extractor
 Mat descriptor;
@@ -278,6 +278,8 @@ noexcept {
 		
 		auto result = classifier->predict(descriptor);
 		
+		imwrite(to_string(material_count++) + ".jpg", candidate);
+
 		if (result == 1.0f) {
 			putText(candidate, "CORRECT", Point(7, 10), 3, 0.25, Scalar(255));
 			++counter;
@@ -290,6 +292,7 @@ noexcept {
 		moveWindow("Candidate", 0, 0);
 		waitKey(10);
 
+		
 	}
 	);
 	
@@ -297,6 +300,8 @@ noexcept {
 	cout << final_rects.size() << " Blobs detected" << endl;
 	cout << counter << " People detected" << endl;
 	cout << "-----------------------" << endl;
+
+	
 }
 
 void create_undetectable_background
@@ -695,8 +700,9 @@ init:
 			save_objects_as_file(cframe, cframe_gray, binary, bounded_rects);
 
 		//C key - Test classification
-		if (ch == 67 || ch == 99)
+		if (ch == 67 || ch == 99) 
 			classify(cframe, cframe_gray, binary, bounded_rects);
+		
 		
 		//Space key
 		if (ch == 32) {
