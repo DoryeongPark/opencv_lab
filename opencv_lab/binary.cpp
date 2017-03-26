@@ -293,7 +293,10 @@ noexcept {
 	}
 	);
 	
+	cout << "-----------------------" << endl;
+	cout << final_rects.size() << " Blobs detected" << endl;
 	cout << counter << " People detected" << endl;
+	cout << "-----------------------" << endl;
 }
 
 void create_undetectable_background
