@@ -35,9 +35,12 @@ void number_files
 
 	fs::directory_iterator end_iter;
 
-	for (fs::directory_iterator iter(dir_path);
+	for
+(
+		fs::directory_iterator iter(dir_path);
 		iter != end_iter;
-		++iter)
+		++iter
+	)
 	{
 		if (fs::is_directory(iter->status()))
 		{
@@ -46,12 +49,32 @@ void number_files
 
 		file_names.push_back(iter->path().string().substr(dir_path.string().size() + 1));
 	}
+	
+	vector<string> new_names;
 
 	for (int i = 0; i < file_names.size(); ++i) {
-		string old_name = dir_path.string() + "//" + file_names.at(i);
 		string new_name = dir_path.string() + "//" + to_string(i) + ".jpg";
-		rename(old_name.c_str(), new_name.c_str());
+		if (!ifstream(new_name).good())
+			new_names.emplace_back(new_name);
 	}
+		
+	for (int i = 0; i < file_names.size(); ++i) {
+		string current_name = dir_path.string() + "//" + file_names.at(i);
+		auto left_side_removed = current_name.substr(0, current_name.find_first_of('.'));
+		auto both_side_removed = current_name.substr(
+														left_side_removed.find_last_of('/') + 1, 
+									                    left_side_removed.size() - (left_side_removed.find_last_of('/') + 1)
+													);
+		auto file_number = stoi(both_side_removed);
+
+		if (0 <= file_number && file_number < file_names.size())
+			continue;
+		
+		rename(current_name.c_str(), new_names.back().c_str());
+		new_names.pop_back();
+	}
+
+	cout << "Total: " << file_names.size() << endl;
 }
 
 //	Normalize keypoints as size
@@ -144,7 +167,7 @@ void main() {
 	classifierSVM->setType(SVM::ONE_CLASS);
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
-	classifierSVM->setNu(0.03);
+	classifierSVM->setNu(0.05);
 	classifierSVM->setGamma(0.1);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setP(0);

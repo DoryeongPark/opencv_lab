@@ -26,7 +26,7 @@ using namespace cv;
 using namespace xfeatures2d;
 using namespace ml;
 
-int material_count = 1300;
+int material_count = 3000;
 
 //ORB Detector & SURF extractor
 Mat descriptor;
