@@ -117,7 +117,7 @@ void main() {
 	number_files("C:\\Users\\zzada\\Documents\\GitHub\\opencv_lab\\opencv_lab\\training_data");
 
 	//Sample of similar images
-	for (int i = 0; i <= 1500; ++i) {
+	for (int i = 0; i <= 2000; ++i) {
 		stringstream nn;
 		nn << "training_data/" << i << ".jpg";
 
@@ -148,8 +148,7 @@ void main() {
 		
 		extractor->compute(train_x, keypoints, descriptors);
 		descriptors = descriptors.reshape(1, 1);
-		cout << descriptors.cols << endl;
-
+		
 		try {
 			samples.push_back(descriptors);
 			groups.push_back(0);

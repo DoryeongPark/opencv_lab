@@ -213,8 +213,6 @@ noexcept {
 	roi.y = static_cast<int>((float)(DATA_HEIGHT - modified_height) / 2);
 
 	create_undetectable_background(result, object_cframe, roi);
-	waitKey(10);
-
 }
 
 void save_objects_as_file
@@ -259,7 +257,7 @@ noexcept {
 		[&](Rect& rect)->void
 	{
 		keypoints.clear();
-
+			
 		Mat candidate;
 
 		refine_data(cframe, cframe_gray, binary, rect, candidate);
@@ -315,18 +313,18 @@ noexcept{
 	//Blend with black background
 	addWeighted(input_array(roi), 0, object_roi, 1, 0.0, input_array(roi));
 	
-	////DEBUG: Before random number creation
-	//vector<KeyPoint> keypoints;
-	//Mat descriptors;
-	//
-	//FAST(input_array, keypoints, 4);
-	//extractor->compute(input_array, keypoints, descriptors);
-	//Mat input_array_before = input_array.clone();
-	//drawKeypoints(input_array_before, keypoints, input_array_before);
-	//
-	//imshow("Before", input_array_before);
-	//moveWindow("Before", 0, 0);
-	//waitKey(10);
+	//DEBUG: Before random number creation
+	/*vector<KeyPoint> keypoints;
+	Mat descriptors;
+	
+	FAST(input_array, keypoints, 4);
+	extractor->compute(input_array, keypoints, descriptors);
+	Mat input_array_before = input_array.clone();
+	drawKeypoints(input_array_before, keypoints, input_array_before);
+	
+	imshow("Before", input_array_before);
+	moveWindow("Before", 0, 0);
+	waitKey(10);*/
 	
 	//Size variables 
 	const int BACKGROUND_ROWS = input_array.rows;
@@ -512,7 +510,7 @@ noexcept{
 	//Mat input_array_after = input_array.clone();
 	//drawKeypoints(input_array, keypoints, input_array);
 	//imshow("After", input_array);
-	//moveWindow("After", 240, 0);
+	//moveWindow("After", 160, 0);
 	//waitKey(10);
 
 }
@@ -658,7 +656,16 @@ init:
 		absdiff(background, cframe_gray, binary);
 		threshold(binary, binary, 16, 255, THRESH_BINARY);
 
+		////DEBUG: Before erosion
+		//imshow("Before Erosion", binary);
+		//waitKey(10);
+		
 		morphologyEx(binary, binary, MORPH_OPEN, opener);
+
+		////DEBUG: Before dilation
+		//imshow("Before Dilation", binary);
+		//waitKey(10);
+
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
 		morphologyEx(binary, binary, MORPH_ERODE, opener);
 
