@@ -84,24 +84,33 @@ void normalize_keypoints
 	const int size
 ) 
 {
-	
-	if (keypoints.size() <= size)
-		return;
 
 	int current_size = keypoints.size();
-	int counter = 0;
-	float interval = static_cast<float>(current_size) / size;
+
+	if (current_size <= size || current_size < 20)
+		return;
 
 	vector<KeyPoint> copy;
 	copy.reserve(keypoints.size());
 
-	while (counter != size) {
-		int index = static_cast<int>(interval * (float)counter);
-		copy.emplace_back(keypoints[index]);
-		++counter;
+	for(int i = 0; i < current_size; ++i)
+		for (int j = i + 1; j < current_size; ++j) {
+			if (keypoints.at(i).pt.x > keypoints.at(j).pt.x) {
+				auto temp = keypoints.at(i);
+				keypoints.at(i) = keypoints.at(j);
+				keypoints.at(j) = temp;
+			}
+		}
+	
+	int half_size = size / 2;
+
+	for (int i = 0; i < half_size; ++i) {
+		copy.emplace_back(keypoints[i]);
+		copy.emplace_back(keypoints[current_size - i - 1]);
 	}
 
 	keypoints = copy;
+
 }
 
 void main() {
@@ -137,7 +146,7 @@ void main() {
 		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
-		normalize_keypoints(keypoints, 22);
+		normalize_keypoints(keypoints, 20);
 		
 		//DEBUG: After normalizations
 		Mat train_x_after_norm = train_x.clone();

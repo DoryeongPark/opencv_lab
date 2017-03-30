@@ -146,7 +146,7 @@ void on_mouse
 	}
 }
 
-//	Normalize keypoints as size
+// Normalize keypoints as size
 void normalize_keypoints
 (
 	vector<KeyPoint>& keypoints,
@@ -154,20 +154,28 @@ void normalize_keypoints
 )
 {
 
-	if (keypoints.size() <= size)
-		return;
-
 	int current_size = keypoints.size();
-	int counter = 0;
-	float interval = static_cast<float>(current_size) / size;
+
+	if (current_size <= size || current_size < 20)
+		return;
 
 	vector<KeyPoint> copy;
 	copy.reserve(keypoints.size());
 
-	while (counter != size) {
-		int index = static_cast<int>(interval * (float)counter);
-		copy.emplace_back(keypoints[index]);
-		++counter;
+	for (int i = 0; i < current_size; ++i)
+		for (int j = i + 1; j < current_size; ++j) {
+			if (keypoints.at(i).pt.x > keypoints.at(j).pt.x) {
+				auto temp = keypoints.at(i);
+				keypoints.at(i) = keypoints.at(j);
+				keypoints.at(j) = temp;
+			}
+		}
+
+	int half_size = size / 2;
+
+	for (int i = 0; i < half_size; ++i) {
+		copy.emplace_back(keypoints[i]);
+		copy.emplace_back(keypoints[current_size - i - 1]);
 	}
 
 	keypoints = copy;
@@ -266,9 +274,9 @@ noexcept {
 			return;
 		
 		FAST(candidate, keypoints, 3);
-		normalize_keypoints(keypoints, 22);
+		normalize_keypoints(keypoints, 20);
 
-		if (keypoints.size() != 22)
+		if (keypoints.size() != 20)
 			return;
 
 		extractor->compute(candidate, keypoints, descriptor);
@@ -290,7 +298,6 @@ noexcept {
 		moveWindow("Candidate", 0, 0);
 		waitKey(10);
 
-		
 	}
 	);
 	
@@ -299,7 +306,6 @@ noexcept {
 	cout << counter << " People detected" << endl;
 	cout << "-----------------------" << endl;
 
-	
 }
 
 void create_undetectable_background
@@ -654,7 +660,7 @@ init:
 		cvtColor(cframe, cframe_gray, COLOR_BGR2GRAY);
 
 		absdiff(background, cframe_gray, binary);
-		threshold(binary, binary, 16, 255, THRESH_BINARY);
+		threshold(binary, binary, 13, 255, THRESH_BINARY);
 
 		////DEBUG: Before erosion
 		//imshow("Before Erosion", binary);
@@ -709,8 +715,7 @@ init:
 		//C key - Test classification
 		if (ch == 67 || ch == 99) 
 			classify(cframe, cframe_gray, binary, bounded_rects);
-		
-		
+
 		//Space key
 		if (ch == 32) {
 			//expand_object_roi(cframe_gray, binary, bounded_rects, 13);
