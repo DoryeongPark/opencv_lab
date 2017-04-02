@@ -12,6 +12,7 @@
 #include<opencv2\xfeatures2d.hpp>
 #include<opencv2\ml.hpp>
 
+
 static bool drag = false;
 static bool b_flag = false;
 
@@ -274,9 +275,9 @@ noexcept {
 			return;
 		
 		FAST(candidate, keypoints, 3);
-		normalize_keypoints(keypoints, 20);
+		normalize_keypoints(keypoints, 16);
 
-		if (keypoints.size() != 20)
+		if (keypoints.size() != 16)
 			return;
 
 		extractor->compute(candidate, keypoints, descriptor);
@@ -287,15 +288,20 @@ noexcept {
 		imwrite(to_string(material_count++) + ".jpg", candidate);
 
 		if (result == 1.0f) {
+			rectangle(cframe, rect, Scalar(0, 255, 0));
 			putText(candidate, "CORRECT", Point(7, 10), 3, 0.25, Scalar(255));
 			++counter;
 		}
 		else {
+			rectangle(cframe, rect, Scalar(0, 0, 255));
 			putText(candidate, "NOT CORRECT", Point(7, 10), 3, 0.25, Scalar(255));
 		}
 
 		imshow("Candidate", candidate);
 		moveWindow("Candidate", 0, 0);
+
+		
+		imshow("Input", cframe);
 		waitKey(10);
 
 	}
@@ -304,7 +310,7 @@ noexcept {
 	cout << "-----------------------" << endl;
 	cout << final_rects.size() << " Blobs detected" << endl;
 	cout << counter << " People detected" << endl;
-	cout << "-----------------------" << endl;
+ 	cout << "-----------------------" << endl;
 
 }
 

@@ -87,7 +87,7 @@ void normalize_keypoints
 
 	int current_size = keypoints.size();
 
-	if (current_size <= size || current_size < 20)
+	if (current_size < size)
 		return;
 
 	vector<KeyPoint> copy;
@@ -115,6 +115,23 @@ void normalize_keypoints
 
 void main() {
 
+	/*int counter = 0;
+
+	while (true) {
+
+		string file_number = to_string(counter);
+		while (file_number.length() < 5)
+			file_number = "0" + file_number;
+		
+		string file_name = "training_data_pgm\\pos" + file_number + ".pgm";
+		Mat test_img = imread(file_name);
+		imshow("Training Images", test_img);
+		waitKey(10);
+		if (counter++ == 10000)
+			break;
+
+	}*/
+	
 	Mat groups;
 	Mat samples;
 	vector<KeyPoint> keypoints;
@@ -126,7 +143,7 @@ void main() {
 	number_files("C:\\Users\\zzada\\Documents\\GitHub\\opencv_lab\\opencv_lab\\training_data");
 
 	//Sample of similar images
-	for (int i = 0; i <= 2000; ++i) {
+	for (int i = 0; i <= 3000; ++i) {
 		stringstream nn;
 		nn << "training_data/" << i << ".jpg";
 
@@ -146,7 +163,7 @@ void main() {
 		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
-		normalize_keypoints(keypoints, 20);
+		normalize_keypoints(keypoints, 16);
 		
 		//DEBUG: After normalizations
 		Mat train_x_after_norm = train_x.clone();
@@ -175,8 +192,8 @@ void main() {
 	classifierSVM->setType(SVM::ONE_CLASS);
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
-	classifierSVM->setNu(0.05);
-	classifierSVM->setGamma(0.1);
+	classifierSVM->setNu(0.1);
+	classifierSVM->setGamma(0.08);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,
