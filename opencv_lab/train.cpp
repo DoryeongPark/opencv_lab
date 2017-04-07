@@ -85,28 +85,17 @@ void normalize_keypoints
 ) 
 {
 
-	int current_size = keypoints.size();
-
+	auto current_size = keypoints.size();
+	auto loop = size / 2;
+	
 	if (current_size < size)
 		return;
-
-	vector<KeyPoint> copy;
-	copy.reserve(keypoints.size());
-
-	for(int i = 0; i < current_size; ++i)
-		for (int j = i + 1; j < current_size; ++j) {
-			if (keypoints.at(i).pt.x > keypoints.at(j).pt.x) {
-				auto temp = keypoints.at(i);
-				keypoints.at(i) = keypoints.at(j);
-				keypoints.at(j) = temp;
-			}
-		}
 	
-	int half_size = size / 2;
+	vector<KeyPoint> copy;
 
-	for (int i = 0; i < half_size; ++i) {
+	for (int i = 0; i < loop; ++i) {
+		copy.emplace_back(keypoints[current_size - 1 - i]);
 		copy.emplace_back(keypoints[i]);
-		copy.emplace_back(keypoints[current_size - i - 1]);
 	}
 
 	keypoints = copy;
@@ -114,23 +103,6 @@ void normalize_keypoints
 }
 
 void main() {
-
-	/*int counter = 0;
-
-	while (true) {
-
-		string file_number = to_string(counter);
-		while (file_number.length() < 5)
-			file_number = "0" + file_number;
-		
-		string file_name = "training_data_pgm\\pos" + file_number + ".pgm";
-		Mat test_img = imread(file_name);
-		imshow("Training Images", test_img);
-		waitKey(10);
-		if (counter++ == 10000)
-			break;
-
-	}*/
 	
 	Mat groups;
 	Mat samples;
@@ -140,7 +112,7 @@ void main() {
 
 	Ptr<SURF> extractor = SURF::create();
 
-	number_files("C:\\Users\\zzada\\Documents\\GitHub\\opencv_lab\\opencv_lab\\training_data");
+	number_files("training_data");
 
 	//Sample of similar images
 	for (int i = 0; i <= 3000; ++i) {
