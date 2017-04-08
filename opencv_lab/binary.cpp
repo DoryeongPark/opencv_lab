@@ -2,6 +2,7 @@
 #include<windows.h>
 #include<fstream>
 #include<istream>
+#include<iterator>
 #include<algorithm>
 #include<queue>
 #include<vector>
@@ -157,31 +158,21 @@ void normalize_keypoints
 )
 {
 
-	int current_size = keypoints.size();
+	auto current_size = keypoints.size();
+	auto loop = size / 2;
 
-	if (current_size <= size || current_size < 20)
+	if (current_size < size)
 		return;
 
 	vector<KeyPoint> copy;
-	copy.reserve(keypoints.size());
 
-	for (int i = 0; i < current_size; ++i)
-		for (int j = i + 1; j < current_size; ++j) {
-			if (keypoints.at(i).pt.x > keypoints.at(j).pt.x) {
-				auto temp = keypoints.at(i);
-				keypoints.at(i) = keypoints.at(j);
-				keypoints.at(j) = temp;
-			}
-		}
-
-	int half_size = size / 2;
-
-	for (int i = 0; i < half_size; ++i) {
+	for (int i = 0; i < loop; ++i) {
+		copy.emplace_back(keypoints[current_size - 1 - i]);
 		copy.emplace_back(keypoints[i]);
-		copy.emplace_back(keypoints[current_size - i - 1]);
 	}
 
 	keypoints = copy;
+
 }
 
 /*
@@ -210,29 +201,14 @@ noexcept {
 	Mat object_cframe = cframe_gray(rect);
 	Mat object_binary = binary(rect);
 
-	GaussianBlur(object_cframe, object_cframe, Size(3, 3), 1);
-
-	//Sharpening object frame
-	Mat sharpening_kernel = (
-								Mat_<char>(3, 3) <<
-								 0,  -1,   0,
-							    -1,   4,  -1,
-								 0,  -1,   0
-						  );
-	Mat temp_object_cframe = object_cframe.clone();
-
-	filter2D
-	(
-		temp_object_cframe,
-		object_cframe,
-		object_cframe.depth(),
-		sharpening_kernel
-	);
-
-
 	resize(object_cframe, object_cframe, Size(modified_width, modified_height), 0, 0, CV_INTER_CUBIC);
 	resize(object_binary, object_binary, Size(modified_width, modified_height), 0, 0, CV_INTER_AREA);
 
+	//Sharpening routine
+	Mat temp_mat;
+	GaussianBlur(object_cframe, temp_mat, cv::Size(0, 0), 2);
+	addWeighted(object_cframe, 1.5, temp_mat, -0.5, 0, object_cframe);
+	
 	threshold(object_binary, object_binary, 0, 1, CV_THRESH_BINARY);
 	object_cframe = object_cframe.mul(object_binary);
 
@@ -384,7 +360,7 @@ noexcept{
 	vector<KeyPoint> keypoints;
 	Mat descriptors;
 	
-	FAST(input_array, keypoints, 5);
+	FAST(input_array, keypoints, 4);
 	extractor->compute(input_array, keypoints, descriptors);
 	Mat input_array_before = input_array.clone();
 	drawKeypoints(input_array_before, keypoints, input_array_before);
@@ -513,6 +489,10 @@ noexcept{
 	//Insert right-bottom point
 	point_queue.push(right_point_candidate);
 
+	//Concatenate left and right
+	left.reserve(left.size() + right.size());
+	left.insert(left.end(), right.begin(), right.end());
+
 	//Blurring outside pixels
 	for (auto&& pixel : left){
 		int count = 0;
@@ -531,10 +511,6 @@ noexcept{
 		}	
 	}
 	
-	for (auto&& pixel : right) {
-
-	}
-
 	//Make histogram for outside pixels
 	int histogram[8] = { 0, 0, 0, 0,
 						 0, 0, 0, 0 };
@@ -617,8 +593,9 @@ noexcept{
 	}
 
 	//DEBUG: After random background creation
-	FAST(input_array, keypoints, 5);
+	FAST(input_array, keypoints, 4);
 	extractor->compute(input_array, keypoints, descriptor);
+	normalize_keypoints(keypoints, 16);
 	Mat input_array_after = input_array.clone();
 	drawKeypoints(input_array, keypoints, input_array);
 	imshow("After", input_array);
