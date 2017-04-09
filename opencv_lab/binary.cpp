@@ -16,6 +16,9 @@
 static bool drag_mouse = false;
 static bool b_flag = false;
 
+constexpr int FAST_N = 6;
+constexpr int NORMALIZATION_SIZE = 12;
+
 constexpr int WIDTH = 400;
 constexpr int HEIGHT = 300;
 
@@ -28,6 +31,7 @@ using namespace xfeatures2d;
 using namespace ml;
 
 int material_count = 3000;
+int test_frame_number = 1;
 
 //ORB Detector & SURF extractor
 Mat descriptor;
@@ -147,7 +151,7 @@ void on_mouse
 		resize(cropped_mat, cropped_mat, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_CUBIC);
 		cvtColor(cropped_mat, cropped_mat, CV_BGR2GRAY);
 		//detector->detect(cropped_mat, keypoints);
-		FAST(cropped_mat, keypoints, 3);
+		FAST(cropped_mat, keypoints, FAST_N);
 		extractor->compute(cropped_mat, keypoints, descriptor);
 		drawKeypoints(cropped_mat, keypoints, cropped_mat);
 
@@ -204,14 +208,16 @@ noexcept {
 	int modified_width = (int)((float)rect.width * ratio);
 	int modified_height = (int)((float)DATA_HEIGHT / 1.2f);
 
-	if (modified_width > DATA_WIDTH)
-		return Mat();
+	if (modified_width > DATA_WIDTH) {
+		result = Mat(0, 0, CV_8U);
+		return result;
+	}
 
 	Mat object_cframe = cframe_gray(rect);
 	Mat object_binary = binary(rect);
 
 	resize(object_cframe, object_cframe, Size(modified_width, modified_height), 0, 0, CV_INTER_CUBIC);
-	resize(object_binary, object_binary, Size(modified_width, modified_height), 0, 0, CV_INTER_AREA);
+	resize(object_binary, object_binary, Size(modified_width, modified_height), 0, 0, CV_INTER_NN);
 
 	//Sharpening routine
 	Mat temp_mat;
@@ -253,7 +259,7 @@ noexcept {
 
 		refine_data(cframe, cframe_gray, binary, rect, result);
 		
-		if (result.empty())
+		if (result.cols == 0)
 			continue;
 
 		imwrite(to_string(++material_count) + ".jpg", result);
@@ -290,15 +296,15 @@ noexcept {
 			if (candidate.empty())
 				return;
 		
-			FAST(candidate, keypoints, 4);
-			normalize_keypoints(keypoints, 16);
+			FAST(candidate, keypoints, FAST_N);
+			normalize_keypoints(keypoints, NORMALIZATION_SIZE);
 
-			if (keypoints.size() != 16)
+			if (keypoints.size() != NORMALIZATION_SIZE)
 				return;
 
 			extractor->compute(candidate, keypoints, descriptor);
 			descriptor = descriptor.reshape(1, 1);
-		
+			
 			auto result = classifier->predict(descriptor);
 		
 			imwrite(to_string(material_count++) + ".jpg", candidate);
@@ -314,7 +320,7 @@ noexcept {
 			}
 
 			imshow("Candidate", candidate);
-			moveWindow("Candidate", 0, 180);
+			moveWindow("Candidate", 0, 200);
 			
 		
 			imshow("Input", cframe);
@@ -369,7 +375,7 @@ noexcept{
 	vector<KeyPoint> keypoints;
 	Mat descriptors;
 	
-	FAST(input_array, keypoints, 4);
+	FAST(input_array, keypoints, FAST_N);
 	extractor->compute(input_array, keypoints, descriptors);
 	Mat input_array_before = input_array.clone();
 	drawKeypoints(input_array_before, keypoints, input_array_before);
@@ -384,7 +390,6 @@ noexcept{
 
 	const int OBJECT_ROWS = object_roi.rows;
 	const int OBJECT_COLS = object_roi.cols;
-	const int OFFSET = (DATA_HEIGHT - OBJECT_ROWS) / 2;
 
 	//Data structures for BFS
 	queue<Point> point_queue;
@@ -507,11 +512,15 @@ noexcept{
 		int count = 0;
 		int pixels = 0;
 		for (int i = 0; i < 8; ++i){
-			int current_pixel = input_array.at<uchar>
-								(
-									pixel.first.y + dx[i],
-									pixel.first.x + dx[i]
-								);
+
+			int x = pixel.first.x + dx[i];
+			int y = pixel.first.y + dy[i];
+			
+			if (x < 0 || x >= DATA_WIDTH ||
+				y < 0 || y >= DATA_HEIGHT)
+				continue;
+			
+			int current_pixel = input_array.at<uchar>(y, x);
 			if (current_pixel != 0) {
 				++count;
 				pixels += current_pixel;
@@ -602,9 +611,9 @@ noexcept{
 	}
 
 	//DEBUG: After random background creation
-	FAST(input_array, keypoints, 4);
+	FAST(input_array, keypoints, FAST_N);
 	extractor->compute(input_array, keypoints, descriptor);
-	normalize_keypoints(keypoints, 16);
+	//normalize_keypoints(keypoints, NORMALIZATION_SIZE);
 	Mat input_array_after = input_array.clone();
 	drawKeypoints(input_array_after, keypoints, input_array_after);
 	imshow("After", input_array_after);
@@ -654,7 +663,7 @@ noexcept {
 		Mat cframe_clone = cframe.clone();
 		rectangle(cframe_clone, *iter, Scalar(0, 0, 255), 0.5);
 		Mat roi = binary(*iter);
-		resize(roi, roi, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_AREA);
+		resize(roi, roi, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_NN);
 		imshow("Input", cframe_clone);
 		imshow("Binary ROI", roi);
 		++iter;
@@ -807,6 +816,10 @@ init:
 		//C key - Test classification
 		if (ch == 67 || ch == 99) 
 			classify(cframe, cframe_gray, binary, bounded_rects);
+		/*if (test_frame_number++ % 30 == 0) {
+			classify(cframe, cframe_gray, binary, bounded_rects);
+			cout << "Breakpoint" << endl;
+		}*/
 
 		//Space key
 		if (ch == 32) {
@@ -821,8 +834,8 @@ init:
 			break;
 
 		imshow("Input", cframe);
-		imshow("Background", background);
-		imshow("Binary", binary);
+		/*imshow("Background", background);
+		imshow("Binary", binary);*/
 		waitKey(10);
 
 	}
