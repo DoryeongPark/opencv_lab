@@ -149,7 +149,7 @@ void main() {
 		
 		try {
 			samples.push_back(descriptors);
-			groups.push_back(0);
+			groups.push_back(1);
 		}
 		catch (Exception e) {
 			cout << "Exception - " + nn.str() << endl;
@@ -164,8 +164,8 @@ void main() {
 	classifierSVM->setType(SVM::ONE_CLASS);
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
-	classifierSVM->setNu(0.05);
-	classifierSVM->setGamma(0.1);
+	classifierSVM->setGamma(0.15);
+	classifierSVM->setNu(0.1);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,

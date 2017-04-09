@@ -13,8 +13,7 @@
 #include<opencv2\xfeatures2d.hpp>
 #include<opencv2\ml.hpp>
 
-
-static bool drag = false;
+static bool drag_mouse = false;
 static bool b_flag = false;
 
 constexpr int WIDTH = 400;
@@ -53,12 +52,22 @@ public:
 		cframe = frame;
 	}
 
-	void determine_first_coordinate(const int& x, const int& y) {
+	void determine_first_coordinate
+	(
+		const int& x, 
+		const int& y
+	) 
+	{
 		first_x = x;
 		first_y = y;
 	}
 
-	void determine_second_coordinate(const int& x, const int& y) {
+	void determine_second_coordinate
+	(
+		const int& x, 
+		const int& y
+	) 
+	{
 		second_x = x;
 		second_y = y;
 	}
@@ -115,11 +124,11 @@ void on_mouse
 
 	if (callback_event == CV_EVENT_LBUTTONDOWN) {
 
-		drag = true;
+		drag_mouse = true;
 		cropper->determine_first_coordinate(x, y);
 
 	}
-	else if (callback_event == CV_EVENT_MOUSEMOVE && drag) {
+	else if (callback_event == CV_EVENT_MOUSEMOVE && drag_mouse) {
 
 		Mat copied_cframe;
 		cropper->get_cframe().copyTo(copied_cframe);
@@ -132,7 +141,7 @@ void on_mouse
 	}
 	else if (callback_event == CV_EVENT_LBUTTONUP) {
 
-		drag = false;
+		drag_mouse = false;
 		cropper->determine_second_coordinate(x, y);
 		Mat cropped_mat = cropper->get_matrix();
 		resize(cropped_mat, cropped_mat, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_CUBIC);
@@ -281,7 +290,7 @@ noexcept {
 			if (candidate.empty())
 				return;
 		
-			FAST(candidate, keypoints, 3);
+			FAST(candidate, keypoints, 4);
 			normalize_keypoints(keypoints, 16);
 
 			if (keypoints.size() != 16)
@@ -304,9 +313,9 @@ noexcept {
 				putText(candidate, "NOT CORRECT", Point(7, 10), 3, 0.25, Scalar(255));
 			}
 
-			/*imshow("Candidate", candidate);
-			moveWindow("Candidate", 0, 0);
-			*/
+			imshow("Candidate", candidate);
+			moveWindow("Candidate", 0, 180);
+			
 		
 			imshow("Input", cframe);
 			waitKey(10);
@@ -597,8 +606,8 @@ noexcept{
 	extractor->compute(input_array, keypoints, descriptor);
 	normalize_keypoints(keypoints, 16);
 	Mat input_array_after = input_array.clone();
-	drawKeypoints(input_array, keypoints, input_array);
-	imshow("After", input_array);
+	drawKeypoints(input_array_after, keypoints, input_array_after);
+	imshow("After", input_array_after);
 	moveWindow("After", 160, 0);
 	waitKey(10);
 	
@@ -777,7 +786,7 @@ init:
 		);
 
 		for (int i = 0; i < contours.size(); ++i) {
-			approxPolyDP(Mat{ contours[i] }, contours_polygon[i], 3, true);
+			approxPolyDP(Mat{ contours[i] }, contours_polygon[i], 1, true);
 			bounded_rects[i] = boundingRect(Mat{ contours_polygon[i] });
 		}
 
