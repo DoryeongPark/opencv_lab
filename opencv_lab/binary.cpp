@@ -171,7 +171,7 @@ void normalize_keypoints
 )
 {
 
-	auto current_size = keypoints.size();
+	/*auto current_size = keypoints.size();
 	auto loop = size / 2;
 
 	if (current_size < size)
@@ -184,7 +184,21 @@ void normalize_keypoints
 		copy.emplace_back(keypoints[i]);
 	}
 
-	keypoints = copy;
+	keypoints = copy;*/
+
+	auto current_size = keypoints.size();
+
+	if (current_size < size)
+		return;
+
+	vector<KeyPoint> copy;
+
+	sort(keypoints.begin(), keypoints.end(),
+		[](const KeyPoint& k1, const KeyPoint& k2) {
+		return k1.response > k2.response;
+	});
+
+	keypoints.erase(keypoints.begin() + size, keypoints.end());
 
 }
 
@@ -814,12 +828,12 @@ init:
 			save_objects_as_file(cframe, cframe_gray, binary, bounded_rects);
 
 		//C key - Test classification
-		if (ch == 67 || ch == 99) 
-			classify(cframe, cframe_gray, binary, bounded_rects);
-		/*if (test_frame_number++ % 30 == 0) {
+		//if (ch == 67 || ch == 99) 
+		//	classify(cframe, cframe_gray, binary, bounded_rects);
+		if (test_frame_number++ % 30 == 0) {
 			classify(cframe, cframe_gray, binary, bounded_rects);
 			cout << "Breakpoint" << endl;
-		}*/
+		}
 
 		//Space key
 		if (ch == 32) {

@@ -104,6 +104,28 @@ void normalize_keypoints
 
 }
 
+void normalize_keypoints_2
+(
+	vector<KeyPoint>& keypoints,
+	const int size
+)
+{
+	auto current_size = keypoints.size();
+
+	if (current_size < size)
+		return;
+	
+	vector<KeyPoint> copy;
+
+	sort(keypoints.begin(), keypoints.end(), 
+		[](const KeyPoint& k1, const KeyPoint& k2) {
+		return k1.response > k2.response;
+	});
+	
+	keypoints.erase(keypoints.begin() + size, keypoints.end());
+	
+}
+
 void main() {
 	
 	Mat groups;
@@ -137,7 +159,7 @@ void main() {
 		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
-		normalize_keypoints(keypoints, NORMALIZATION_SIZE);
+		normalize_keypoints_2(keypoints, NORMALIZATION_SIZE);
 		
 		//DEBUG: After normalizations
 		Mat train_x_after_norm = train_x.clone();
