@@ -190,8 +190,8 @@ void main() {
 	classifierSVM->setType(SVM::ONE_CLASS);
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
-	classifierSVM->setGamma(0.1);
-	classifierSVM->setNu(0.14);
+	classifierSVM->setGamma(0.12);
+	classifierSVM->setNu(0.45);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,

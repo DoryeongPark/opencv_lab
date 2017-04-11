@@ -38,6 +38,7 @@ Mat descriptor;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = Algorithm::load<SVM>("classifier.yml");
 
+
 Mat groups;
 Mat samples;
 vector<KeyPoint> keypoints;
