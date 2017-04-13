@@ -38,7 +38,6 @@ Mat descriptor;
 Ptr<SURF> extractor = SURF::create();
 Ptr<SVM> classifier = Algorithm::load<SVM>("classifier.yml");
 
-
 Mat groups;
 Mat samples;
 vector<KeyPoint> keypoints;
@@ -110,11 +109,6 @@ public:
 
 };
 
-void on_mouse(int callback_event, int x, int y, int flags, void* param);
-void create_undetectable_background(Mat& background, Mat& object_roi, Rect roi) noexcept;
-void expand_rect(Rect& rect, const int& pixel) noexcept;
-void display_rects(Mat& cframe, Mat& binary, vector<Rect>& rects) noexcept;
-
 void on_mouse
 (
 	int callback_event, 
@@ -172,7 +166,7 @@ void normalize_keypoints
 )
 {
 
-	/*auto current_size = keypoints.size();
+	auto current_size = keypoints.size();
 	auto loop = size / 2;
 
 	if (current_size < size)
@@ -185,9 +179,9 @@ void normalize_keypoints
 		copy.emplace_back(keypoints[i]);
 	}
 
-	keypoints = copy;*/
+	keypoints = copy;
 
-	auto current_size = keypoints.size();
+	/*auto current_size = keypoints.size();
 
 	if (current_size < size)
 		return;
@@ -199,7 +193,7 @@ void normalize_keypoints
 		return k1.response > k2.response;
 	});
 
-	keypoints.erase(keypoints.begin() + size, keypoints.end());
+	keypoints.erase(keypoints.begin() + size, keypoints.end());*/
 
 }
 

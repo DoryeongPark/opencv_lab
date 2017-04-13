@@ -133,7 +133,7 @@ void main() {
 	vector<KeyPoint> keypoints;
 
 	Mat descriptors;
-
+	
 	Ptr<SURF> extractor = SURF::create();
 
 	number_files("training_data");
@@ -146,7 +146,7 @@ void main() {
 		if (!ifstream(nn.str()).good()) {
 			continue;
 		}
-		
+
 		Mat train_x = imread(nn.str());
 		cvtColor(train_x, train_x, CV_BGR2GRAY);
 
@@ -159,8 +159,8 @@ void main() {
 		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
-		normalize_keypoints_2(keypoints, NORMALIZATION_SIZE);
-		
+		normalize_keypoints(keypoints, NORMALIZATION_SIZE);
+
 		//DEBUG: After normalizations
 		Mat train_x_after_norm = train_x.clone();
 		drawKeypoints(train_x_after_norm, keypoints, train_x_after_norm);
@@ -170,7 +170,8 @@ void main() {
 		
 		extractor->compute(train_x, keypoints, descriptors);
 		descriptors = descriptors.reshape(1, 1);
-	
+
+		
 		try {
 			samples.push_back(descriptors);
 			groups.push_back(0);
@@ -183,15 +184,13 @@ void main() {
 
 	}
 
-	cout << descriptors.cols << endl;
-	
 	Ptr<SVM> classifierSVM = SVM::create();
 
 	classifierSVM->setType(SVM::ONE_CLASS);
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
-	classifierSVM->setGamma(0.12);
-	classifierSVM->setNu(0.45);
+	classifierSVM->setGamma(0.2);
+	classifierSVM->setNu(0.3);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,
