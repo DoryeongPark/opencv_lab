@@ -128,8 +128,8 @@ void normalize_keypoints_2
 
 void main() {
 	
-	Mat groups;
-	Mat samples;
+	Mat labels;
+	Mat train_data;
 	vector<KeyPoint> keypoints;
 
 	Mat descriptors;
@@ -162,19 +162,24 @@ void main() {
 		normalize_keypoints(keypoints, NORMALIZATION_SIZE);
 
 		//DEBUG: After normalizations
-		Mat train_x_after_norm = train_x.clone();
+		/*Mat train_x_after_norm = train_x.clone();
 		drawKeypoints(train_x_after_norm, keypoints, train_x_after_norm);
 		imshow("Normalized Keypoints", train_x_after_norm);
 		moveWindow("Normalized Keypoints", 160, 0);
 		waitKey(10);
 		
 		extractor->compute(train_x, keypoints, descriptors);
-		descriptors = descriptors.reshape(1, 1);
+		descriptors = descriptors.reshape(1, 1);*/
 
-		
+		if (keypoints.size() < NORMALIZATION_SIZE)
+			continue;
+
 		try {
-			samples.push_back(descriptors);
-			groups.push_back(0);
+
+			for (auto&& p : keypoints) 
+				train_data.push_back(Point(p.pt.x, p.pt.y));
+
+			labels.push_back(1);
 		}
 		catch (Exception e) {
 			cout << "Exception - " + nn.str() << endl;
@@ -183,6 +188,9 @@ void main() {
 		keypoints.clear();
 
 	}
+
+	train_data = train_data.reshape(1, labels.rows);
+	train_data.convertTo(train_data, CV_32F);
 
 	Ptr<SVM> classifierSVM = SVM::create();
 
@@ -195,7 +203,7 @@ void main() {
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,
 		500, FLT_EPSILON));
-	classifierSVM->train(samples, ml::ROW_SAMPLE, groups);
+	classifierSVM->train(train_data, ml::ROW_SAMPLE, labels);
 	
 	classifierSVM->save("classifier.yml");
 
