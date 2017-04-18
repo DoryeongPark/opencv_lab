@@ -159,7 +159,7 @@ void main() {
 		moveWindow("Original Keypoints", 0, 0);
 		waitKey(10);
 
-		normalize_keypoints(keypoints, NORMALIZATION_SIZE);
+		normalize_keypoints_2(keypoints, NORMALIZATION_SIZE);
 
 		//DEBUG: After normalizations
 		/*Mat train_x_after_norm = train_x.clone();
@@ -179,14 +179,14 @@ void main() {
 			for (auto&& p : keypoints) 
 				train_data.push_back(Point(p.pt.x, p.pt.y));
 
-			labels.push_back(1);
+			labels.push_back(0);
 		}
 		catch (Exception e) {
 			cout << "Exception - " + nn.str() << endl;
 		}
 
 		keypoints.clear();
-
+		
 	}
 
 	train_data = train_data.reshape(1, labels.rows);
@@ -198,7 +198,7 @@ void main() {
 	classifierSVM->setKernel(SVM::RBF);
 	classifierSVM->setDegree(3);
 	classifierSVM->setGamma(0.2);
-	classifierSVM->setNu(0.3);
+	classifierSVM->setNu(0.05);
 	classifierSVM->setCoef0(0);
 	classifierSVM->setP(0);
 	classifierSVM->setTermCriteria(cvTermCriteria(CV_TERMCRIT_ITER,

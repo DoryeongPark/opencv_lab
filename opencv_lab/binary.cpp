@@ -16,7 +16,7 @@
 static bool drag_mouse = false;
 static bool b_flag = false;
 
-constexpr int FAST_N = 6;
+constexpr int FAST_N = 9;
 constexpr int NORMALIZATION_SIZE = 12;
 
 constexpr int WIDTH = 400;
@@ -166,7 +166,7 @@ void normalize_keypoints
 )
 {
 
-	auto current_size = keypoints.size();
+	/*auto current_size = keypoints.size();
 	auto loop = size / 2;
 
 	if (current_size < size)
@@ -179,9 +179,9 @@ void normalize_keypoints
 		copy.emplace_back(keypoints[i]);
 	}
 
-	keypoints = copy;
+	keypoints = copy;*/
 
-	/*auto current_size = keypoints.size();
+	auto current_size = keypoints.size();
 
 	if (current_size < size)
 		return;
@@ -193,7 +193,7 @@ void normalize_keypoints
 		return k1.response > k2.response;
 	});
 
-	keypoints.erase(keypoints.begin() + size, keypoints.end());*/
+	keypoints.erase(keypoints.begin() + size, keypoints.end());
 
 }
 
@@ -375,7 +375,7 @@ noexcept {
 
 	//Make histogram for outside pixels
 	int histogram[8] = { 0, 0, 0, 0,
-		0, 0, 0, 0 };
+						 0, 0, 0, 0 };
 	int max_point = -1;
 	int max_value = -1;
 
@@ -457,7 +457,7 @@ noexcept {
 	//DEBUG: After random background creation
 	FAST(input_array, keypoints, FAST_N);
 	extractor->compute(input_array, keypoints, descriptor);
-	//normalize_keypoints(keypoints, NORMALIZATION_SIZE);
+	normalize_keypoints(keypoints, NORMALIZATION_SIZE);
 	Mat input_array_after = input_array.clone();
 	drawKeypoints(input_array_after, keypoints, input_array_after);
 	imshow("After", input_array_after);
@@ -481,10 +481,10 @@ noexcept {
 
 	int width = rect.width;
 	int height = rect.height;
-	float ratio = ((float)DATA_HEIGHT / 1.2f) / (float)height;
+	float ratio = ((float)DATA_HEIGHT / 1.5f) / (float)height;
 
 	int modified_width = (int)((float)rect.width * ratio);
-	int modified_height = (int)((float)DATA_HEIGHT / 1.2f);
+	int modified_height = (int)((float)DATA_HEIGHT / 1.5f);
 
 	if (modified_width > DATA_WIDTH) {
 		result = Mat(0, 0, CV_8U);
@@ -516,6 +516,7 @@ noexcept {
 	roi.y = static_cast<int>((float)(DATA_HEIGHT - modified_height) / 2);
 
 	create_undetectable_background(result, object_cframe, roi);
+
 }
 
 
@@ -580,13 +581,13 @@ noexcept {
 			if (keypoints.size() != NORMALIZATION_SIZE)
 				return;
 
-			Mat predict_data;
-	
-			for (auto&& p : keypoints)
-				predict_data.push_back(p);
-
 			//extractor->compute(candidate, keypoints, descriptor);
-			predict_data = predict_data.reshape(1, NORMALIZATION_SIZE * 2);
+			vector<Point> predict_points;
+			predict_points.reserve(NORMALIZATION_SIZE);
+			for (auto&& p : keypoints)
+				predict_points.emplace_back(Point(p.pt.x, p.pt.y));
+			
+			Mat predict_data = Mat(predict_points).reshape(1, 1);
 			predict_data.convertTo(predict_data, CV_32F);
 
 			auto result = classifier->predict(predict_data);
@@ -828,13 +829,13 @@ init:
 			save_objects_as_file(cframe, cframe_gray, binary, bounded_rects);
 
 		//C key - Test classification
-		//if (ch == 67 || ch == 99) 
-		//	classify(cframe, cframe_gray, binary, bounded_rects);
-		if (test_frame_number++ % 30 == 0) {
+		if (ch == 67 || ch == 99) 
+			classify(cframe, cframe_gray, binary, bounded_rects);
+		/*if (test_frame_number++ % 30 == 0) {
 			classify(cframe, cframe_gray, binary, bounded_rects);
 			cout << "Breakpoint" << endl;
 		}
-
+*/
 		//Space key
 		if (ch == 32) {
 			//expand_object_roi(cframe_gray, binary, bounded_rects, 13);
