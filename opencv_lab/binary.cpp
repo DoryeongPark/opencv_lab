@@ -16,7 +16,7 @@
 static bool drag_mouse = false;
 static bool b_flag = false;
 
-constexpr int FAST_N = 6;
+constexpr int FAST_N = 9;
 constexpr int NORMALIZATION_SIZE = 12;
 
 constexpr int WIDTH = 400;
@@ -198,6 +198,275 @@ void normalize_keypoints
 }
 
 /*
+Create background pixels which doesn't make keypoints
+*/
+void create_undetectable_background
+(
+	Mat& input_array,
+	Mat& object_roi,
+	Rect roi
+)
+noexcept {
+
+	//Array variables for 8-direction accessing 
+	int dx[] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
+	int dy[] = { -1, -1, -1, 0, 0, 0, 1, 1, 1 };
+
+	//Blend with black background
+	addWeighted(input_array(roi), 0, object_roi, 1, 0.0, input_array(roi));
+
+	//DEBUG: Before random number creation
+	vector<KeyPoint> keypoints;
+	Mat descriptors;
+
+	FAST(input_array, keypoints, FAST_N);
+	extractor->compute(input_array, keypoints, descriptors);
+	Mat input_array_before = input_array.clone();
+	drawKeypoints(input_array_before, keypoints, input_array_before);
+
+	imshow("Before", input_array_before);
+	moveWindow("Before", 0, 0);
+	waitKey(10);
+
+	//Size variables 
+	const int BACKGROUND_ROWS = input_array.rows;
+	const int BACKGROUND_COLS = input_array.cols;
+
+	const int OBJECT_ROWS = object_roi.rows;
+	const int OBJECT_COLS = object_roi.cols;
+
+	//Data structures for BFS
+	queue<Point> point_queue;
+
+	vector<vector<bool>> point_checker
+	(
+		BACKGROUND_ROWS,
+		vector<bool>(BACKGROUND_COLS, false)
+	);
+
+	for (int i = 0; i < BACKGROUND_ROWS; ++i)
+		for (int j = 0; j < BACKGROUND_COLS; ++j)
+			if (input_array.at<uchar>(i, j) != 0)
+				point_checker[i][j] = true;
+
+	//Pixel storage 
+	vector<pair<Point, uchar>> left;
+	vector<pair<Point, uchar>> right;
+
+	left.reserve(BACKGROUND_ROWS);
+	right.reserve(BACKGROUND_ROWS);
+
+	//Variables for angle of start point
+	int min_gap_left = 360;
+	int min_gap_right = 360;
+
+	Point left_point_candidate;
+	Point right_point_candidate;
+
+	const int BACKGROUND_ROWS_HALF = BACKGROUND_ROWS / 2;
+	const int CENTER_X = BACKGROUND_COLS / 2;
+	const int CENTER_Y = BACKGROUND_ROWS / 2;
+
+	//Get max point and start points
+	for (int i = 0; i < BACKGROUND_ROWS_HALF; ++i) {
+		for (int j = 0; j < BACKGROUND_COLS; ++j)
+			if (input_array.at<uchar>(i, j) != 0) {
+				int test_pixel = input_array.at<uchar>(i, j);
+				left.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
+				int gap = abs(i - j);
+				if (gap < min_gap_left) {
+					min_gap_left = gap;
+					left_point_candidate = Point(j, i);
+				}
+				break;
+			}
+
+		for (int j = BACKGROUND_COLS - 1; j >= 0; --j)
+			if (input_array.at<uchar>(i, j) != 0) {
+				right.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
+				int gap = abs((j - CENTER_X) - (CENTER_Y - i));
+				if (gap < min_gap_right) {
+					min_gap_right = gap;
+					right_point_candidate = Point(j, i);
+				}
+				break;
+			}
+	}
+
+	//Insert left-top point
+	point_queue.push(left_point_candidate);
+
+	//Insert right-top point
+	point_queue.push(right_point_candidate);
+
+	//Insert left point
+	for (int i = 0; i < BACKGROUND_COLS; ++i)
+		if (input_array.at<uchar>(CENTER_Y, i) != 0) {
+			point_queue.push(Point(i, CENTER_Y));
+			break;
+		}
+
+	//Insert right point
+	for (int i = BACKGROUND_COLS - 1; i >= 0; --i)
+		if (input_array.at<uchar>(CENTER_Y, i) != 0) {
+			point_queue.push(Point(i, CENTER_Y));
+			break;
+		}
+
+	//Initiate variables to compare again
+	min_gap_left = 360;
+	min_gap_right = 360;
+
+	for (int i = BACKGROUND_ROWS_HALF; i < BACKGROUND_ROWS; ++i) {
+		for (int j = 0; j < BACKGROUND_COLS; ++j)
+			if (input_array.at<uchar>(i, j) != 0) {
+				left.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
+				int gap = abs((CENTER_X - j) - (i - CENTER_Y));
+				if (gap < min_gap_left) {
+					min_gap_left = gap;
+					left_point_candidate = Point(j, i);
+				}
+				break;
+			}
+
+		for (int j = BACKGROUND_COLS - 1; j >= 0; --j)
+			if (input_array.at<uchar>(i, j) != 0) {
+				right.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
+				int gap = abs(j - i);
+				if (gap < min_gap_right) {
+					min_gap_right = gap;
+					right_point_candidate = Point(j, i);
+				}
+				break;
+			}
+	}
+
+	//Insert left-botton point
+	point_queue.push(left_point_candidate);
+
+	//Insert right-bottom point
+	point_queue.push(right_point_candidate);
+
+	//Concatenate left and right
+	left.reserve(left.size() + right.size());
+	left.insert(left.end(), right.begin(), right.end());
+
+	//Blurring outside pixels
+	for (auto&& pixel : left) {
+		int count = 0;
+		int pixels = 0;
+		for (int i = 0; i < 8; ++i) {
+
+			int x = pixel.first.x + dx[i];
+			int y = pixel.first.y + dy[i];
+
+			if (x < 0 || x >= DATA_WIDTH ||
+				y < 0 || y >= DATA_HEIGHT)
+				continue;
+
+			int current_pixel = input_array.at<uchar>(y, x);
+			if (current_pixel != 0) {
+				++count;
+				pixels += current_pixel;
+			}
+
+		}
+	}
+
+	//Make histogram for outside pixels
+	int histogram[8] = { 0, 0, 0, 0,
+		0, 0, 0, 0 };
+	int max_point = -1;
+	int max_value = -1;
+
+	const int VALUE_SCOPE = 16;
+
+	for (auto&& pixel : left)
+		++histogram[(static_cast<int>(pixel.second) / (VALUE_SCOPE * 2))];
+
+	for (auto&& pixel : right)
+		++histogram[(static_cast<int>(pixel.second) / (VALUE_SCOPE * 2))];
+
+	for (int i = 0; i < 8; ++i)
+		if (max_value < histogram[i]) {
+			max_value = histogram[i];
+			max_point = i;
+		}
+
+	const int STANDARD = max_point * (VALUE_SCOPE * 2) + VALUE_SCOPE;
+	const int STANDARD_MIN = STANDARD - (VALUE_SCOPE * 2);
+	const int STANDARD_MAX = STANDARD + (VALUE_SCOPE * 2);
+
+	Point current_point;
+
+	//Search routine
+	while (!point_queue.empty()) {
+
+		current_point = point_queue.front();
+		point_queue.pop();
+
+		int x = current_point.x;
+		int y = current_point.y;
+
+		int sum = 0;
+		int count = 0;
+
+		//Search 8-directions
+		for (int i = -1; i <= 1; ++i) {
+			for (int j = -1; j <= 1; ++j) {
+
+				if (i == 0 && j == 0)
+					continue;
+
+				int checked_x = x + i;
+				int checked_y = y + j;
+
+				if (checked_x < 0 || BACKGROUND_COLS <= checked_x ||
+					checked_y < 0 || BACKGROUND_ROWS <= checked_y)
+					continue;
+
+				auto current_pixel = static_cast<int>(input_array.at<uchar>(checked_y, checked_x));
+
+				if (current_pixel != 0) {
+					sum += current_pixel;
+					++count;
+				}
+
+				if (!point_checker[checked_y][checked_x]) {
+					point_checker[checked_y][checked_x] = true;
+					point_queue.push(Point(checked_x, checked_y));
+				}
+			}
+		}
+
+		//Routine to get average
+		if (count != 0) {
+			int pixel_value = sum / count;
+
+			if (STANDARD_MIN <= pixel_value &&
+				pixel_value < STANDARD_MAX)
+				input_array.at<uchar>(current_point.y, current_point.x) = pixel_value;
+			else {
+				input_array.at<uchar>(current_point.y, current_point.x) = STANDARD;
+			}
+
+		}
+
+	}
+
+	//DEBUG: After random background creation
+	FAST(input_array, keypoints, FAST_N);
+	extractor->compute(input_array, keypoints, descriptor);
+	//normalize_keypoints(keypoints, NORMALIZATION_SIZE);
+	Mat input_array_after = input_array.clone();
+	drawKeypoints(input_array_after, keypoints, input_array_after);
+	imshow("After", input_array_after);
+	moveWindow("After", 160, 0);
+	waitKey(10);
+
+}
+
+/*
 	Refines image of rect with same format(160x160) 
 */
 Mat& refine_data
@@ -212,10 +481,10 @@ noexcept {
 
 	int width = rect.width;
 	int height = rect.height;
-	float ratio = ((float)DATA_HEIGHT / 1.2f) / (float)height;
+	float ratio = ((float)DATA_HEIGHT / 1.5f) / (float)height;
 
 	int modified_width = (int)((float)rect.width * ratio);
-	int modified_height = (int)((float)DATA_HEIGHT / 1.2f);
+	int modified_height = (int)((float)DATA_HEIGHT / 1.5f);
 
 	if (modified_width > DATA_WIDTH) {
 		result = Mat(0, 0, CV_8U);
@@ -362,274 +631,6 @@ float calculate_angle
 }
 
 
-/*
-	Create background pixels which doesn't make keypoints 
-*/
-void create_undetectable_background
-(
-	Mat& input_array, 
-	Mat& object_roi, 
-	Rect roi
-)
-noexcept{
-
-	//Array variables for 8-direction accessing 
-	int dx[] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
-	int dy[] = { -1, -1, -1, 0, 0, 0, 1, 1, 1 };
-
-	//Blend with black background
-	addWeighted(input_array(roi), 0, object_roi, 1, 0.0, input_array(roi));
-	
-	//DEBUG: Before random number creation
-	vector<KeyPoint> keypoints;
-	Mat descriptors;
-	
-	FAST(input_array, keypoints, FAST_N);
-	extractor->compute(input_array, keypoints, descriptors);
-	Mat input_array_before = input_array.clone();
-	drawKeypoints(input_array_before, keypoints, input_array_before);
-	
-	imshow("Before", input_array_before);
-	moveWindow("Before", 0, 0);
-	waitKey(10);
-	
-	//Size variables 
-	const int BACKGROUND_ROWS = input_array.rows;
- 	const int BACKGROUND_COLS = input_array.cols;
-
-	const int OBJECT_ROWS = object_roi.rows;
-	const int OBJECT_COLS = object_roi.cols;
-
-	//Data structures for BFS
-	queue<Point> point_queue;
-
-	vector<vector<bool>> point_checker
-	(
-		BACKGROUND_ROWS,
-		vector<bool>(BACKGROUND_COLS, false)
-	);
-	
-	for (int i = 0; i < BACKGROUND_ROWS; ++i)
-		for (int j = 0; j < BACKGROUND_COLS; ++j)
-			if (input_array.at<uchar>(i, j) != 0)
-				point_checker[i][j] = true;
-
-	//Pixel storage 
-	vector<pair<Point, uchar>> left;
-	vector<pair<Point, uchar>> right;
-
-	left.reserve(BACKGROUND_ROWS);
-	right.reserve(BACKGROUND_ROWS);
-
-	//Variables for angle of start point
-	int min_gap_left = 360;
-	int min_gap_right = 360;
-	
-	Point left_point_candidate;
-	Point right_point_candidate;
-
-	const int BACKGROUND_ROWS_HALF = BACKGROUND_ROWS / 2;
-	const int CENTER_X = BACKGROUND_COLS / 2;
-	const int CENTER_Y = BACKGROUND_ROWS / 2;
-
-	//Get max point and start points
-	for (int i = 0; i < BACKGROUND_ROWS_HALF; ++i) {
-		for (int j = 0; j < BACKGROUND_COLS; ++j)
-			if (input_array.at<uchar>(i, j) != 0) {
-				int test_pixel = input_array.at<uchar>(i, j);
-				left.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
-				int gap = abs(i - j);
-				if (gap < min_gap_left) {
-					min_gap_left = gap;
-					left_point_candidate = Point(j, i);
-				}
-				break;
-			}
-
-		for(int j = BACKGROUND_COLS - 1; j >= 0; --j)
-			if(input_array.at<uchar>(i, j) != 0){
-				right.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
-				int gap = abs((j - CENTER_X) - (CENTER_Y - i));
-				if (gap < min_gap_right) {
-					min_gap_right = gap;
-					right_point_candidate = Point(j, i);
-				}
-				break;
-			}
-	}
-
-	//Insert left-top point
-	point_queue.push(left_point_candidate);
-
-	//Insert right-top point
-	point_queue.push(right_point_candidate);
-
-	//Insert left point
-	for (int i = 0; i < BACKGROUND_COLS; ++i) 
-		if (input_array.at<uchar>(CENTER_Y, i) != 0) {
-			point_queue.push(Point(i, CENTER_Y));
-			break;
-		}
-	
-	//Insert right point
-	for (int i = BACKGROUND_COLS - 1; i >= 0; --i) 
-		if (input_array.at<uchar>(CENTER_Y, i) != 0) {
-			point_queue.push(Point(i, CENTER_Y));
-			break;
-		}
-	
-	//Initiate variables to compare again
-	min_gap_left = 360;
-	min_gap_right = 360;
-
-	for (int i = BACKGROUND_ROWS_HALF; i < BACKGROUND_ROWS; ++i) {
-		for (int j = 0; j < BACKGROUND_COLS; ++j)
-			if (input_array.at<uchar>(i, j) != 0) {
-				left.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
-				int gap = abs((CENTER_X - j) - (i - CENTER_Y));
-				if (gap < min_gap_left) {
-					min_gap_left = gap;
-					left_point_candidate = Point(j, i);
-				}
-				break;
-			}
-		
-		for (int j = BACKGROUND_COLS - 1; j >= 0; --j)
-			if (input_array.at<uchar>(i, j) != 0) {
-				right.emplace_back(Point(j, i), input_array.at<uchar>(i, j));
-				int gap = abs(j - i);
-				if (gap < min_gap_right) {
-					min_gap_right = gap;
-					right_point_candidate = Point(j, i);
-				}
-				break;
-			}
-	}
-
-	//Insert left-botton point
-	point_queue.push(left_point_candidate);
-
-	//Insert right-bottom point
-	point_queue.push(right_point_candidate);
-
-	//Concatenate left and right
-	left.reserve(left.size() + right.size());
-	left.insert(left.end(), right.begin(), right.end());
-
-	//Blurring outside pixels
-	for (auto&& pixel : left){
-		int count = 0;
-		int pixels = 0;
-		for (int i = 0; i < 8; ++i){
-
-			int x = pixel.first.x + dx[i];
-			int y = pixel.first.y + dy[i];
-			
-			if (x < 0 || x >= DATA_WIDTH ||
-				y < 0 || y >= DATA_HEIGHT)
-				continue;
-			
-			int current_pixel = input_array.at<uchar>(y, x);
-			if (current_pixel != 0) {
-				++count;
-				pixels += current_pixel;
-			}
-				
-		}	
-	}
-	
-	//Make histogram for outside pixels
-	int histogram[8] = { 0, 0, 0, 0,
-						 0, 0, 0, 0 };
-	int max_point = -1;
-	int max_value = -1;
-
-	const int VALUE_SCOPE = 16;
-	
-	for (auto&& pixel : left)
-		++histogram[(static_cast<int>(pixel.second) / (VALUE_SCOPE * 2))];
-
-	for (auto&& pixel : right)
-		++histogram[(static_cast<int>(pixel.second) / (VALUE_SCOPE * 2))];
-
-	for (int i = 0; i < 8; ++i) 
-		if (max_value < histogram[i]) {
-			max_value = histogram[i];
-			max_point = i;
-		}
-
-	const int STANDARD = max_point * (VALUE_SCOPE * 2) + VALUE_SCOPE;
-	const int STANDARD_MIN = STANDARD - (VALUE_SCOPE * 2);
-	const int STANDARD_MAX = STANDARD + (VALUE_SCOPE * 2);
-
-	Point current_point;
-
-	//Search routine
-	while (!point_queue.empty()) {
-		
-		current_point = point_queue.front();
-		point_queue.pop();
-
-		int x = current_point.x;
-		int y = current_point.y;
-
-		int sum = 0;
-		int count = 0;
-
-		//Search 8-directions
-		for (int i = -1; i <= 1; ++i) {
-			for (int j = -1; j <= 1; ++j) {
-
-				if (i == 0 && j == 0)
-					continue;
-
-				int checked_x = x + i;
-				int checked_y = y + j;
-							
-				if (checked_x < 0 || BACKGROUND_COLS <= checked_x ||
-					checked_y < 0 || BACKGROUND_ROWS <= checked_y)
-					continue;
-				
-				auto current_pixel = static_cast<int>(input_array.at<uchar>(checked_y, checked_x));
-
-				if (current_pixel != 0) {
-					sum += current_pixel;
-					++count;
-				}
-
-				if(!point_checker[checked_y][checked_x]){
-					point_checker[checked_y][checked_x] = true;
-					point_queue.push(Point(checked_x, checked_y));
-				}
-			}
-		}
-
-		//Routine to get average
-		if (count != 0) {
-			int pixel_value = sum / count;
-
-			if (STANDARD_MIN <= pixel_value &&
-				pixel_value < STANDARD_MAX)
-				input_array.at<uchar>(current_point.y, current_point.x) = pixel_value;
-			else {
-				input_array.at<uchar>(current_point.y, current_point.x) = STANDARD;
-			}
-
-		}
-
-	}
-
-	//DEBUG: After random background creation
-	FAST(input_array, keypoints, FAST_N);
-	extractor->compute(input_array, keypoints, descriptor);
-	//normalize_keypoints(keypoints, NORMALIZATION_SIZE);
-	Mat input_array_after = input_array.clone();
-	drawKeypoints(input_array_after, keypoints, input_array_after);
-	imshow("After", input_array_after);
-	moveWindow("After", 160, 0);
-	waitKey(10);
-	
-}
 
 void expand_rect
 (
