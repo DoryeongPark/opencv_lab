@@ -8,13 +8,11 @@ using namespace tracking;
 //
 //==========================================================
 
-TrackingObject::TrackingObject(const Rect& rect){
-
-	auto now = system_clock::now();
-	auto now_ms = time_point_cast<milliseconds>(now);
-	auto epoch = now_ms.time_since_epoch();
-	auto value = duration_cast<milliseconds>(epoch);
-	start_time = value.count();
+TrackingObject::TrackingObject(const Rect& object){
+	
+	start_time = get_current_time_milliseconds();
+	this->object = object;
+	index = 0;
 
 }
 
@@ -46,14 +44,18 @@ void TrackingObject::set_rect
 
 }
 
-bool TrackingObject::is_valid
-(
-	const long& current_time
-)
+bool TrackingObject::is_valid()
 {
 
-	//현재 시간 차와 출현 빈도 수를
+	//Get duration
+	auto current_time = get_current_time_milliseconds();
+	long duration_milliseconds = start_time - current_time;
+	
+	// Judge Something with gap and index
 
+
+	return false;
+	
 }
 
 
@@ -69,9 +71,9 @@ int TrackingObjectPool::get_counts() {
 
 }
 
-void TrackingObjectPool::set_current_time() {
+void TrackingObjectPool::reset_current_time() {
 
-
+	
 
 }
 

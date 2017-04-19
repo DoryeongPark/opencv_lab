@@ -18,6 +18,18 @@ using namespace chrono;
 
 namespace tracking {
 
+	//Function for two classes
+	long get_current_time_milliseconds() {
+
+		auto now = system_clock::now();
+		auto now_ms = time_point_cast<milliseconds>(now);
+		auto epoch = now_ms.time_since_epoch();
+		auto value = duration_cast<milliseconds>(epoch);
+		
+		return value.count();
+
+	}
+
 	/*
 		Expresses information of one object image bound  
 	*/
@@ -26,14 +38,14 @@ namespace tracking {
 		Rect object;
 		long start_time;
 
-		int index = 0;
+		int index;
 
 	public:
 		
 		TrackingObject(const Rect& rect);
 		bool is_overlapped(const Rect& object);
 		void set_rect(Rect& object);
-		bool is_valid(const long& current_time);
+		bool is_valid();
 
 	};
 
@@ -50,7 +62,7 @@ namespace tracking {
 	public:
 	
 		int get_counts();
-		void set_current_time();
+		void reset_current_time();
 		void reflect(vector<Rect>& objects);
 
 	private:
