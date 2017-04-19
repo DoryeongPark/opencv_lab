@@ -15,10 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="train.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="binary.cpp">
+    <ClCompile Include="tracking.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
