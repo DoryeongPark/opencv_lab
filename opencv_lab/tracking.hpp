@@ -44,7 +44,7 @@ namespace tracking {
 		
 		TrackingObject(const Rect& rect);
 		bool is_overlapped(const Rect& object);
-		void set_rect(Rect& object);
+		void update(Rect& object);
 		bool is_valid();
 
 	};
@@ -57,18 +57,10 @@ namespace tracking {
 
 		vector<TrackingObject> pool;
 
-		long current_time;
-
 	public:
 	
 		int get_counts();
-		void reset_current_time();
 		void reflect(vector<Rect>& objects);
-
-	private:
-
-		bool is_continous(const Rect& rect);
-		bool is_new(const Rect& rect);
 
 	};
 	

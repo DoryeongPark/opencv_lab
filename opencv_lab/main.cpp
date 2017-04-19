@@ -11,6 +11,8 @@
 #include<opencv2\imgproc.hpp>
 #include<opencv2\highgui.hpp>
 
+#include"tracking.hpp"
+
 static bool drag_mouse = false;
 static bool b_flag = false;
 
@@ -25,6 +27,7 @@ constexpr int DATA_HEIGHT = 160;
 
 using namespace std;
 using namespace cv;
+using namespace tracking;
 
 class Cropper {
 private:
@@ -213,9 +216,12 @@ init:
 	string file_name = "";
 	cout << "Please input file name: ";
 	cin >> file_name;
+
 	if (!ifstream(file_name).good()) {
+
 		cout << "File doesn't exist" << endl;
 		goto init;
+
 	}
 
 	//Video resolution Setting
@@ -225,7 +231,7 @@ init:
 
 	//Initialize Matrix
 	Mat cframe{ HEIGHT, WIDTH, CV_8UC3 };
-	Mat cframe_gray{ HEIGHT, WIDTH, CV_8UC1 };
+	Mat gray_cframe{ HEIGHT, WIDTH, CV_8UC1 };
 	Mat accumulator = Mat::zeros(Size{ WIDTH, HEIGHT }, CV_32FC1);
 	Mat mask{ HEIGHT, WIDTH, CV_8U };
 	mask = Scalar{ 1 };
@@ -240,20 +246,27 @@ init:
 
 	//Background Setting 
 	if (ifstream("Background.jpg").good()) {
+
 		Mat loaded_image = imread("Background.jpg", CV_LOAD_IMAGE_GRAYSCALE);
 		resize(loaded_image, loaded_image, Size(WIDTH, HEIGHT), 0, 0, CV_INTER_NN);
 		accumulateWeighted(loaded_image, accumulator, 1, mask);
+
 	}
 	else {
+
 		camera.read(cframe);
 		if (cframe.empty())
 			return 0;
-		cvtColor(cframe, cframe_gray, COLOR_BGR2GRAY);
-		accumulateWeighted(cframe_gray, accumulator, 1, mask);
+		cvtColor(cframe, gray_cframe, COLOR_BGR2GRAY);
+		accumulateWeighted(gray_cframe, accumulator, 1, mask);
+
 	}
 
 	//Initialize Cropper 
 	Cropper cropper;
+
+	//Initialize TrackingObjectPool
+	TrackingObjectPool tracking_object_pool;
 
 	//Playing video file
 	while (true) {
@@ -266,10 +279,10 @@ init:
 		cropper.update_frame(cframe);
 		setMouseCallback("Input", on_mouse, &cropper);
 
-		cvtColor(cframe, cframe_gray, COLOR_BGR2GRAY);
+		cvtColor(cframe, gray_cframe, COLOR_BGR2GRAY);
 
-		absdiff(background, cframe_gray, binary);
-		threshold(binary, binary, 13, 255, THRESH_BINARY);
+		absdiff(background, gray_cframe, binary);
+		threshold(binary, binary, 16, 255, THRESH_BINARY);
 
 		////DEBUG: Before erosion
 		//imshow("Before Erosion", binary);
@@ -284,17 +297,23 @@ init:
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
 		morphologyEx(binary, binary, MORPH_ERODE, opener);
 
-		accumulateWeighted(cframe_gray, accumulator, 0.001, mask);
+		//Accumulate current frame to background frame
+		accumulateWeighted(gray_cframe, accumulator, 0.001, mask);
 		convertScaleAbs(accumulator, background);
 
 		findContours
 		(
 			binary, contours, hierarchy,
-			CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point{ 0, 0 }
+			CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, 
+			Point{ 0, 0 }
 		);
 
-		vector<vector<Point>> contours_polygon{ contours.size() };
-		vector<Rect> bounded_rects{ contours.size() };
+		int contours_size = contours.size();
+
+		vector<vector<Point>> contours_polygon;
+		vector<Rect> detected_objects;
+		contours_polygon.reserve(contours_size);
+		detected_objects.reserve(contours_size);
 
 		drawContours
 		(
@@ -302,11 +321,17 @@ init:
 			CV_FILLED, 8, hierarchy, INT_MAX
 		);
 
+		
 		for (int i = 0; i < contours.size(); ++i) {
+
 			approxPolyDP(Mat{ contours[i] }, contours_polygon[i], 1, true);
-			bounded_rects[i] = boundingRect(Mat{ contours_polygon[i] });
+			detected_objects[i] = boundingRect(Mat{ contours_polygon[i] });
 		}
 
+		tracking_object_pool.reflect(detected_objects);
+		
+		cout << tracking_object_pool.get_counts() << endl;
+		
 		char ch;
 		ch = waitKey(10);
 

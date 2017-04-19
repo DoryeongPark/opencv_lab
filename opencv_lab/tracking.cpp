@@ -34,27 +34,29 @@ bool TrackingObject::is_overlapped
 
 }
 
-void TrackingObject::set_rect
+void TrackingObject::update
 (
 	Rect& object
 )
 {
 
 	this->object = object;
+	++index;
 
 }
 
 bool TrackingObject::is_valid()
 {
-
+	
 	//Get duration
 	auto current_time = get_current_time_milliseconds();
 	long duration_milliseconds = start_time - current_time;
 	
+	//===================================
 	// Judge Something with gap and index
+	//===================================
 
-
-	return false;
+	return true;
 	
 }
 
@@ -71,43 +73,50 @@ int TrackingObjectPool::get_counts() {
 
 }
 
-void TrackingObjectPool::reset_current_time() {
-
-	
-
-}
 
 void TrackingObjectPool::reflect
 (
 	vector<Rect>& objects
 ) 
 {
+
+	//Remove low indexed object	
+	for (auto iter = pool.begin(); 
+			  iter != pool.end();) {
+
+		if (!iter->is_valid()) {
+
+			iter = pool.erase(iter);
+			continue;
+
+		}
+
+		++iter;
+	}
+	 
 	//For objects from current image
 	for (auto&& current_object : objects) {
 		
+		bool is_reflected = false;
+
 		//For tracking objects from previous image
-		for (auto&& tracking_object : this->pool) {
+		for (auto&& tracking_object : pool) {
 			
-			tracking_object.is_overlapped(current_object);
-			
-					
+			if (tracking_object.is_overlapped(current_object)) {
+
+				tracking_object.update(current_object);
+				is_reflected = true;
+
+			}
 			
 		}
+
+		if (!is_reflected) {
+			
+			pool.emplace_back(current_object);
+
+		}
+
 	}
 		
-}
-
-bool TrackingObjectPool::is_continous
-(
-	const Rect& object
-) 
-{
-	return false;
-}
-
-bool TrackingObjectPool::is_new(
-	const Rect& object
-) 
-{
-	return false;
 }
