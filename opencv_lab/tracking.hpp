@@ -23,15 +23,17 @@ namespace tracking {
 	*/
 	class TrackingObject {
 
-		Rect roi;
+		Rect object;
 		long start_time;
 
 		int index = 0;
 
 	public:
 		
-		TrackingObject() = default;
+		TrackingObject(const Rect& rect);
 		bool is_overlapped(const Rect& object);
+		void set_rect(Rect& object);
+		bool is_valid(const long& current_time);
 
 	};
 
@@ -49,7 +51,7 @@ namespace tracking {
 	
 		int get_counts();
 		void set_current_time();
-		void reflect(const vector<Rect>& objects);
+		void reflect(vector<Rect>& objects);
 
 	private:
 

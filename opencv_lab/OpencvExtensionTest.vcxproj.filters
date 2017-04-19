@@ -15,10 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="train.cpp">
+    <ClInclude Include="tracking.hpp">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="binary.cpp">
+    <ClCompile Include="tracking.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

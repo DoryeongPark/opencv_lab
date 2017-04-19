@@ -194,9 +194,11 @@ void display_color_binary
 	for (int i = 0; i < binary.rows; ++i)
 		for (int j = 0; j < binary.cols; ++j)
 			if ((int)binary.at<uchar>(i, j) == 255) {
+
 				cframe.at<Vec3b>(i, j)[0] = 0;
 				cframe.at<Vec3b>(i, j)[1] = 0;
 				cframe.at<Vec3b>(i, j)[2] = 255;
+
 			}
 
 }
@@ -336,5 +338,6 @@ init:
 	
 	destroyAllWindows();
 	imwrite("Background.jpg", accumulator);
+
 }
 
