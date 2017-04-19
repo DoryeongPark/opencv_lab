@@ -585,7 +585,8 @@ noexcept {
 			
 			auto result = classifier->predict(descriptor);
 		
-			imwrite(to_string(material_count++) + ".jpg", candidate);
+			//For save images as file
+			//imwrite(to_string(material_count++) + ".jpg", candidate);
 
 			if (result == 1.0f) {
 				rectangle(cframe, rect, Scalar(0, 255, 0));
