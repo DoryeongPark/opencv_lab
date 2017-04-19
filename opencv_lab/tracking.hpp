@@ -1,5 +1,6 @@
 #include<iostream>
 #include<vector>
+#include<chrono>
 
 #include<opencv2\core.hpp>
 #include<opencv2\imgproc.hpp>
@@ -7,6 +8,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace chrono;
 
 /*
 	Author		:	Doryeong Park
@@ -22,11 +24,14 @@ namespace tracking {
 	class TrackingObject {
 
 		Rect roi;
-		long startTrackingTime;
+		long start_time;
+
+		int index = 0;
 
 	public:
 		
-		
+		TrackingObject() = default;
+		bool is_overlapped(const Rect& object);
 
 	};
 
@@ -43,15 +48,12 @@ namespace tracking {
 	public:
 	
 		int get_counts();
-
 		void set_current_time();
-
 		void reflect(const vector<Rect>& objects);
 
 	private:
 
 		bool is_continous(const Rect& rect);
-		
 		bool is_new(const Rect& rect);
 
 	};

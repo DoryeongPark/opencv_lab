@@ -25,20 +25,6 @@ constexpr int DATA_HEIGHT = 160;
 
 using namespace std;
 using namespace cv;
-using namespace xfeatures2d;
-using namespace ml;
-
-int material_count = 3000;
-int test_frame_number = 1;
-
-//ORB Detector & SURF extractor
-Mat descriptor;
-Ptr<SURF> extractor = SURF::create();
-Ptr<SVM> classifier = Algorithm::load<SVM>("classifier.yml");
-
-Mat groups;
-Mat samples;
-vector<KeyPoint> keypoints;
 
 class Cropper {
 private:
@@ -143,11 +129,7 @@ void on_mouse
 		Mat cropped_mat = cropper->get_matrix();
 		resize(cropped_mat, cropped_mat, Size(DATA_WIDTH, DATA_HEIGHT), 0, 0, CV_INTER_CUBIC);
 		cvtColor(cropped_mat, cropped_mat, CV_BGR2GRAY);
-		//detector->detect(cropped_mat, keypoints);
-		FAST(cropped_mat, keypoints, FAST_N);
-		extractor->compute(cropped_mat, keypoints, descriptor);
-		drawKeypoints(cropped_mat, keypoints, cropped_mat);
-
+	
 		imshow("Data", cropped_mat);
 		imshow("Input", cropper->get_cframe());
 
@@ -202,7 +184,7 @@ noexcept
 }
 
 
-void brend_color_and_binary
+void display_color_binary
 (
 	Mat& cframe, 
 	Mat& binary
@@ -233,9 +215,6 @@ init:
 		cout << "File doesn't exist" << endl;
 		goto init;
 	}
-
-	//Load classifier
-	classifier = Algorithm::load<SVM>("classifier.yml");
 
 	//Video resolution Setting
 	VideoCapture camera = VideoCapture{ file_name };
@@ -334,7 +313,7 @@ init:
 			b_flag = !b_flag;
 
 		if(b_flag)
-			brend_color_and_binary(cframe, binary);
+			display_color_binary(cframe, binary);
 
 		//Space key
 		if (ch == 32) {
