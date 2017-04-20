@@ -2,6 +2,19 @@
 
 using namespace tracking;
 
+//Public function for tracking classes
+long IKnowTime::get_current_time() {
+	
+	auto now = system_clock::now();
+	auto now_ms = time_point_cast<milliseconds>(now);
+	auto epoch = now_ms.time_since_epoch();
+	auto value = duration_cast<milliseconds>(epoch);
+
+	return value.count();
+
+}
+
+
 //==========================================================
 //
 //	Tracking function definition
@@ -10,9 +23,9 @@ using namespace tracking;
 
 TrackingObject::TrackingObject(const Rect& object){
 	
-	start_time = get_current_time_milliseconds();
+	start_time = this->get_current_time();
 	this->object = object;
-	index = 0;
+	index = 1;
 
 }
 
@@ -22,16 +35,20 @@ bool TrackingObject::is_overlapped
 	const Rect& current_object
 )
 {
+	bool result = false;
+	
+	Point edges[4];
+	
+	edges[0] = Point(current_object.x, current_object.y);
+	edges[1] = Point(current_object.x + current_object.width, current_object.y);
+	edges[2] = Point(current_object.x, current_object.y + current_object.height);
+	edges[3] = Point(current_object.x + current_object.width, current_object.y + current_object.height);
 
-	auto min_x = object.x;
-	auto max_x = min_x + object.width;
+	for (int i = 0; i < 4; ++i)
+		if (object.contains(edges[i]))
+			result = true;
 
-	auto min_y = object.y;
-	auto max_y = min_y + object.height;
-
-	return (min_x <= current_object.x && current_object.x <= max_x) && 
-		   (min_y <= current_object.y && current_object.y <= max_y);
-
+	return false;
 }
 
 void TrackingObject::update
@@ -49,15 +66,23 @@ bool TrackingObject::is_valid()
 {
 	
 	//Get duration
-	auto current_time = get_current_time_milliseconds();
-	long duration_milliseconds = start_time - current_time;
+	auto current_time = this->get_current_time();
+	long duration_milliseconds = current_time - start_time;
 	
 	//===================================
 	// Judge Something with gap and index
 	//===================================
 
-	return true;
+	if (duration_milliseconds < 50)
+		return true;
+
+	return duration_milliseconds / index < 500;
 	
+}
+
+Rect& TrackingObject::get_object()
+{
+	return object;
 }
 
 
@@ -79,21 +104,7 @@ void TrackingObjectPool::reflect
 	vector<Rect>& objects
 ) 
 {
-
-	//Remove low indexed object	
-	for (auto iter = pool.begin(); 
-			  iter != pool.end();) {
-
-		if (!iter->is_valid()) {
-
-			iter = pool.erase(iter);
-			continue;
-
-		}
-
-		++iter;
-	}
-	 
+ 
 	//For objects from current image
 	for (auto&& current_object : objects) {
 		
@@ -118,5 +129,47 @@ void TrackingObjectPool::reflect
 		}
 
 	}
+
+	//Remove low indexed object	
+	for (auto iter = pool.begin();
+		iter != pool.end();) {
+
+		if (!iter->is_valid()) {
+
+			iter = pool.erase(iter);
+			continue;
+
+		}
+
+		++iter;
+	}
 		
 }
+
+void TrackingObjectPool::display_objects
+(
+	Mat& current_frame
+)
+{
+
+	Mat showing_frame;
+	current_frame.copyTo(showing_frame);
+
+	for (auto&& object : pool)
+		rectangle(showing_frame, object.get_object(), Scalar{ 0, 0, 255 });
+
+	imshow("Tracking objects", showing_frame);
+
+}
+
+long tracking::IKnowTime::get_current_time()
+{
+
+	auto now = system_clock::now();
+	auto now_ms = time_point_cast<milliseconds>(now);
+	auto epoch = now_ms.time_since_epoch();
+	auto value = duration_cast<milliseconds>(epoch);
+
+	return value.count();
+
+}}

@@ -25,6 +25,8 @@ constexpr int HEIGHT = 300;
 constexpr int DATA_WIDTH = 160;
 constexpr int DATA_HEIGHT = 160;
 
+static int frame_number = 0;
+
 using namespace std;
 using namespace cv;
 using namespace tracking;
@@ -308,28 +310,31 @@ init:
 			Point{ 0, 0 }
 		);
 
-		int contours_size = contours.size();
-
-		vector<vector<Point>> contours_polygon;
-		vector<Rect> detected_objects;
-		contours_polygon.reserve(contours_size);
-		detected_objects.reserve(contours_size);
-
 		drawContours
 		(
 			binary, contours, -1, cv::Scalar::all(255),
 			CV_FILLED, 8, hierarchy, INT_MAX
 		);
 
+		int contours_size = contours.size();
 		
-		for (int i = 0; i < contours.size(); ++i) {
+		vector<vector<Point>> contours_polygon{ (unsigned int)contours_size };
+		vector<Rect> detected_objects{ (unsigned int)contours_size };
+		
+		for (int i = 0; i < contours_size; ++i) {
 
 			approxPolyDP(Mat{ contours[i] }, contours_polygon[i], 1, true);
 			detected_objects[i] = boundingRect(Mat{ contours_polygon[i] });
+
 		}
 
-		tracking_object_pool.reflect(detected_objects);
-		
+		if (frame_number++ > 30) {
+
+			tracking_object_pool.reflect(detected_objects);
+			tracking_object_pool.display_objects(cframe);
+
+		}
+
 		cout << tracking_object_pool.get_counts() << endl;
 		
 		char ch;

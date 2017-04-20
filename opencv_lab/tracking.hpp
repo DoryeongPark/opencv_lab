@@ -18,22 +18,17 @@ using namespace chrono;
 
 namespace tracking {
 
-	//Function for two classes
-	long get_current_time_milliseconds() {
+	struct IKnowTime {
+	protected:
+		long get_current_time();
+	};
 
-		auto now = system_clock::now();
-		auto now_ms = time_point_cast<milliseconds>(now);
-		auto epoch = now_ms.time_since_epoch();
-		auto value = duration_cast<milliseconds>(epoch);
-		
-		return value.count();
-
-	}
 
 	/*
 		Expresses information of one object image bound  
 	*/
-	class TrackingObject {
+	class TrackingObject : IKnowTime
+	{
 
 		Rect object;
 		long start_time;
@@ -46,6 +41,7 @@ namespace tracking {
 		bool is_overlapped(const Rect& object);
 		void update(Rect& object);
 		bool is_valid();
+		Rect& get_object();
 
 	};
 
@@ -53,7 +49,8 @@ namespace tracking {
 	/*
 		Manager class for all tracking objects
 	*/
-	class TrackingObjectPool {
+	class TrackingObjectPool : IKnowTime
+	{
 
 		vector<TrackingObject> pool;
 
@@ -61,6 +58,7 @@ namespace tracking {
 	
 		int get_counts();
 		void reflect(vector<Rect>& objects);
+		void display_objects(Mat& current_frame);
 
 	};
 	
