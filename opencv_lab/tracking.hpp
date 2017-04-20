@@ -18,26 +18,56 @@ using namespace chrono;
 
 namespace tracking {
 
-	struct IKnowTime {
-	protected:
-		long get_current_time();
-	};
+	using namespace std::chrono;
+	using std::chrono::system_clock;
 
+	// - Note
+	//      Stop watch.
+	//      - `pick()`  : Acquire elapsed time from start
+	//      - `reset()` : Reset the starting time_point
+	template <typename Clock>
+	class stop_watch
+	{
+	public:
+		using clock_type = Clock;
+		using time_point = typename clock_type::time_point;
+		using duration = typename clock_type::duration;
+
+	protected:
+		time_point start = clock_type::now();
+
+	public:
+		template <typename UnitType = std::chrono::milliseconds>
+		decltype(auto) pick() const noexcept
+		{
+			duration span = clock_type::now() - start;
+			return std::chrono::duration_cast<UnitType>(span);
+		};
+
+		template <typename UnitType = std::chrono::milliseconds>
+		decltype(auto) reset() noexcept
+		{
+			auto span = this->pick<UnitType>();
+			// reset start time point
+			start = clock_type::now();
+			return std::chrono::duration_cast<UnitType>(span);
+		}
+	};
 
 	/*
 		Expresses information of one object image bound  
 	*/
-	class TrackingObject : IKnowTime
+	class TrackingObject : stop_watch<system_clock>
 	{
 
 		Rect object;
-		long start_time;
+		//system_clock::time_point start_time;
 
 		int index;
 
 	public:
 		
-		TrackingObject(const Rect& rect);
+		explicit TrackingObject(const Rect& rect);
 		bool is_overlapped(const Rect& object);
 		void update(Rect& object);
 		bool is_valid();
@@ -49,7 +79,7 @@ namespace tracking {
 	/*
 		Manager class for all tracking objects
 	*/
-	class TrackingObjectPool : IKnowTime
+	class TrackingObjectPool
 	{
 
 		vector<TrackingObject> pool;

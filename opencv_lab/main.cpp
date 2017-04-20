@@ -241,7 +241,7 @@ init:
 	Mat background{ HEIGHT, WIDTH, CV_8UC1 };
 	Mat binary;
 	Mat opener = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
-	Mat closer = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 9 }, Point{ 3, 4 });
+	Mat closer = getStructuringElement(MORPH_ELLIPSE, Size{ 9, 11 }, Point{ 4, 5 });
 	
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
