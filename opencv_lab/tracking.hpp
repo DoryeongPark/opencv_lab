@@ -61,9 +61,12 @@ namespace tracking {
 	{
 
 		Rect object;
-		//system_clock::time_point start_time;
+		int score;
+		int area;
+		
+		int number = 1;
 
-		int index;
+		int overlap_point = 0;
 
 	public:
 		
@@ -72,7 +75,17 @@ namespace tracking {
 		void update(Rect& object);
 		bool is_valid();
 		Rect& get_object();
+		int get_area();
 
+		int get_number();
+		void set_number(const int& _number);
+		void decrease_number();
+
+		int get_overlap_point();
+		void set_overlap_point(const int& _overlap_point);
+		void increse_overlap_point();
+		
+	
 	};
 
 
@@ -89,6 +102,9 @@ namespace tracking {
 		int get_counts();
 		void reflect(vector<Rect>& objects);
 		void display_objects(Mat& current_frame);
+
+	private:
+		void reset_overlap_points();
 
 	};
 	
