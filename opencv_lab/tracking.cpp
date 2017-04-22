@@ -178,7 +178,18 @@ void TrackingObjectPool::reflect
 		}
 		else if(overlapped_indexes_size == 1) {
 
-			pool[overlapped_indexes[0]].update(current_object);
+			if (pool[overlapped_indexes[0]].get_overlap_point() > 1){ 
+
+				pool[overlapped_indexes[0]].decrease_number();
+				auto&& another = TrackingObject{ current_object };
+				pool.emplace_back(another);
+
+			}
+			else {
+
+				pool[overlapped_indexes[0]].update(current_object);
+
+			}
 
 		}
 		else {
@@ -213,10 +224,6 @@ void TrackingObjectPool::reflect
 		}
 			
 	}
-
-	for (auto& tracking_objects : pool)
-		if (tracking_objects.get_overlap_point() > 1)
-			tracking_objects.decrease_number();
 
 	//Remove low indexed object	
 	for (auto iter = pool.begin();
