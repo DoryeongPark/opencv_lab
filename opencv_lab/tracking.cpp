@@ -4,7 +4,7 @@ using namespace tracking;
 
 //==========================================================
 //
-//	Tracking function definition
+//	Tracking Object function definition
 //
 //==========================================================
 
@@ -76,8 +76,8 @@ bool TrackingObject::is_valid()
 	if (duration_milliseconds.count() < 10 && score == 1)
 		return true;
 
-	//Here will be variable depends on frame_rate 
-	return (duration_milliseconds.count() / score) < 150;
+	//Here will be variable cab be changed by frame_rate 
+	return (duration_milliseconds.count() / score) < 80;
 
 }
 
@@ -171,6 +171,7 @@ void TrackingObjectPool::reflect
 				
 		auto overlapped_indexes_size = overlapped_indexes.size();
 		
+		//Regard it as new object
 		if (overlapped_indexes_size == 0) {
 			
 			pool.emplace_back(TrackingObject{ current_object });
