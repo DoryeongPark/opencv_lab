@@ -10,9 +10,8 @@ using namespace tracking;
 
 TrackingObject::TrackingObject(const Rect& object){
 
-	reset();
+	this->reset();
 	this->object = object;
-	score = 1;
 	area = object.area();
 
 }
@@ -56,10 +55,9 @@ void TrackingObject::update
 )
 {
 
-	this->number = 1;
 	this->object = object;
 	this->area = object.area();
-	++score;
+	this->reset();
 
 }
 
@@ -70,14 +68,11 @@ bool TrackingObject::is_valid()
 	milliseconds duration_milliseconds = this->pick();
 	
 	//========================================
-	// Judge Something with duration and index
+	// Judge deletion with duration
 	//========================================
 
-	if (duration_milliseconds.count() < 10 && score == 1)
-		return true;
-
 	//Here will be variable cab be changed by frame_rate 
-	return (duration_milliseconds.count() / score) < 80;
+	return (duration_milliseconds.count()) < 800;
 
 }
 
@@ -179,7 +174,8 @@ void TrackingObjectPool::reflect
 		}
 		else if(overlapped_indexes_size == 1) {
 
-			if (pool[overlapped_indexes[0]].get_overlap_point() > 1){ 
+			//@@@ Execute it after loop @@@//
+			if (pool[overlapped_indexes[0]].get_overlap_point() >= 1){ 
 
 				pool[overlapped_indexes[0]].decrease_number();
 				auto&& another = TrackingObject{ current_object };
@@ -203,9 +199,9 @@ void TrackingObjectPool::reflect
 				total_area += pool[index].get_area();
 			
 			//Regard it as collsion of people
-			if (total_area > current_object.area()) 
+			if (total_area > current_object.area())
 				for (auto& index : overlapped_indexes)
-					total_area += pool[index].get_number();
+					number += pool[index].get_number();
 
 			//Regard it as segmentation of people
 			else
@@ -219,20 +215,21 @@ void TrackingObjectPool::reflect
 			sort(overlapped_indexes.rbegin(), 
 				 overlapped_indexes.rend());
 			
-			for (auto& index : overlapped_indexes) 
+			for (auto& index : overlapped_indexes)
 				pool.erase(pool.begin() + index);
 	
 		}
 			
 	}
 
-	//Remove low indexed object	
+	//Remove object which has long duration	
 	for (auto iter = pool.begin();
-		iter != pool.end();) {
+			  iter != pool.end();) {
 
 		if (!iter->is_valid()) {
 
 			iter = pool.erase(iter);
+			cout << "ERASE ==" << endl;
 			continue;
 
 		}
@@ -256,8 +253,12 @@ void TrackingObjectPool::display_objects
 	Mat showing_frame;
 	current_frame.copyTo(showing_frame);
 
-	for (auto& object : pool) 
+	for (auto& object : pool) {
 		rectangle(showing_frame, object.get_object(), Scalar{ 0, 0, 255 });
+		/*putText(showing_frame, to_string(object.get_number()), 
+			Point(object.get_object().x + object.get_object().width / 3, 
+				  object.get_object().y + object.get_object().height / 3), 3, 0.5, Scalar{ 255, 0, 0 });*/
+	}
 		
 			
 	imshow("Tracking objects", showing_frame);

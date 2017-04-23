@@ -61,11 +61,9 @@ namespace tracking {
 	{
 
 		Rect object;
-		int score;
 		int area;
 		
 		int number = 1;
-
 		int overlap_point = 0;
 
 	public:

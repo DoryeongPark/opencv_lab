@@ -98,6 +98,26 @@ public:
 
 };
 
+bool is_overlapped
+(
+	const Rect& object,
+	const Rect& current_object
+) 
+{
+	Point edges[4];
+
+	edges[0] = Point(current_object.x, current_object.y);
+	edges[1] = Point(current_object.x + current_object.width, current_object.y);
+	edges[2] = Point(current_object.x, current_object.y + current_object.height);
+	edges[3] = Point(current_object.x + current_object.width, current_object.y + current_object.height);
+
+	for (int i = 0; i < 4; ++i)
+		if (object.contains(edges[i]))
+			return true;
+
+	return false;
+}
+
 void on_mouse
 (
 	int callback_event, 
@@ -287,14 +307,14 @@ init:
 		threshold(binary, binary, 16, 255, THRESH_BINARY);
 
 		////DEBUG: Before erosion
-		//imshow("Before Erosion", binary);
-		//waitKey(10);
+		/*imshow("Before Erosion", binary);
+		waitKey(10);*/
 		
 		morphologyEx(binary, binary, MORPH_OPEN, opener);
 
 		////DEBUG: Before dilation
-		//imshow("Before Dilation", binary);
-		//waitKey(10);
+		/*imshow("Before Dilation", binary);
+		waitKey(10);*/
 
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
 		morphologyEx(binary, binary, MORPH_ERODE, opener);
@@ -326,6 +346,21 @@ init:
 			approxPolyDP(Mat{ contours[i] }, contours_polygon[i], 1, true);
 			detected_objects[i] = boundingRect(Mat{ contours_polygon[i] });
 
+		}
+
+		//Test Code
+		for (int i = 0; i < contours_size; ++i) {
+			
+			for (int j = 0; j < contours_size; ++j) {
+				
+				if (i == j)
+					continue;
+
+				if (is_overlapped(detected_objects[i], detected_objects[j]))
+					cout << "중복 발생" << endl;
+
+			}
+			
 		}
 
 		if (frame_number++ > 30) {
@@ -360,8 +395,8 @@ init:
 			break;
 
 		imshow("Input", cframe);
-		/*imshow("Background", background);
-		imshow("Binary", binary);*/
+		//imshow("Background", background);
+		//imshow("Binary", binary);
 		waitKey(10);
 
 	}
