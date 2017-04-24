@@ -34,31 +34,9 @@ bool TrackingObject::is_overlapped
 	Rect& current_object
 )
 {
-	Rect* big;
-	Rect* small;
-	
-	if (object.area() > current_object.area()) {
-		big = &object;
-		small = &current_object;
-	}
-	else {
-		big = &current_object;
-		small = &object;
-	}
-	 
 
-	Point edges[4];
-	
-	edges[0] = Point(small->x, small->y);
-	edges[1] = Point(small->x + small->width, small->y);
-	edges[2] = Point(small->x, small->y + small->height);
-	edges[3] = Point(small->x + small->width, small->y + small->height);
+	return (object & current_object).area() > 0;
 
-	for (int i = 0; i < 4; ++i)
-		if (big->contains(edges[i]))
-			return true;
-
-	return false;
 }
 
 void TrackingObject::update
@@ -209,7 +187,7 @@ void TrackingObjectPool::reflect
 			/*cout << "New Object Inserted - [" << current_object.x  << " " << current_object.y << " " 
 				 << current_object.width << " " << current_object.height << "]" << endl;*/
 
-			//Testing new object
+			//Showing new object
 			Mat showing_frame;
 			current_frame.copyTo(showing_frame);
 			rectangle(showing_frame, current_object, Scalar{ 0, 255, 0 });
@@ -223,42 +201,52 @@ void TrackingObjectPool::reflect
 
 				pool[overlapped_indexes[0]].decrease_number();
 				auto&& another = TrackingObject{ current_object };
+				another.set_tracking_point(pool[overlapped_indexes[0]].get_tracking_point());
 				pool.emplace_back(another);
-				/*cout << "Updated - overlapped_indexes_size == 1, Overlap Point > 1" << endl;*/
+				cout << "Object branched" << endl;
 
 			}
 			else {
 
 				pool[overlapped_indexes[0]].update(current_object);
-				/*cout << "Updated - overlapped_indexes_size == 1, Overlap Point == 1" << endl;*/
-
+			
 			}
 
 		}
 		else {
 			
-			int total_area = 0;
+			int tracking_point = 0;
+			int total_number = 0;
+
 			int number = 0;
+			bool is_merged_with_noise = false;
 
-			//Get total area size
+			//Determine whether it is merged with noise or not
 			for (auto& index : overlapped_indexes) {
-				if(pool[index].get_tracking_point() < 5)
-					
 
-				total_area += pool[index].get_area();
+				total_number += pool[index].get_number();
+				tracking_point = pool[index].get_tracking_point();
+
+				if (tracking_point < 15) {
+					
+					is_merged_with_noise = true;
+					break;
+
+				}
+					
 			}
 			
-			//Regard it as collsion of people
-			if (total_area > current_object.area())
-				for (auto& index : overlapped_indexes)
-					number += pool[index].get_number();
-
-			//Regard it as segmentation of people
-			else
+			//Regard it as collsion with noise
+			if (is_merged_with_noise)
 				number = 1;
+
+			//Regard it as collision with people
+			else
+				number = total_number;
 			
 			TrackingObject tracking_object{ current_object };
 			tracking_object.set_number(number);
+			tracking_object.set_tracking_point(tracking_point);
 			pool.emplace_back(tracking_object);
 
 			//Erase overlapped tracking objects
@@ -268,7 +256,7 @@ void TrackingObjectPool::reflect
 			for (auto& index : overlapped_indexes)
 				pool.erase(pool.begin() + index);
 
-			cout << "Object branched" << endl;
+			cout << "Object merged" << endl;
 	
 		}
 			
@@ -310,9 +298,12 @@ void TrackingObjectPool::display_objects
 
 	for (auto& object : pool) {
 		rectangle(showing_frame, object.get_object(), Scalar{ 0, 0, 255 });
-		/*putText(showing_frame, to_string(object.get_number()), 
-			Point(object.get_object().x + object.get_object().width / 3, 
-				  object.get_object().y + object.get_object().height / 3), 3, 0.5, Scalar{ 255, 0, 0 });*/
+		putText(showing_frame, to_string(object.get_number()), 
+			Point(object.get_object().x + object.get_object().width / 2, 
+				  object.get_object().y + object.get_object().height / 3), 3, 0.4, Scalar{ 255, 0, 0 });
+		putText(showing_frame, to_string(object.get_tracking_point()),
+			Point(object.get_object().x + object.get_object().width / 2,
+				object.get_object().y + object.get_object().height / 3 + 10), 3, 0.4, Scalar{ 0, 255, 0 });
 	}
 		
 			

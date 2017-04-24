@@ -100,22 +100,13 @@ public:
 
 bool is_overlapped
 (
-	const Rect& object,
-	const Rect& current_object
+	Rect& object,
+	Rect& current_object
 ) 
 {
-	Point edges[4];
+	
+	return (object & current_object).area() > 0;
 
-	edges[0] = Point(current_object.x, current_object.y);
-	edges[1] = Point(current_object.x + current_object.width, current_object.y);
-	edges[2] = Point(current_object.x, current_object.y + current_object.height);
-	edges[3] = Point(current_object.x + current_object.width, current_object.y + current_object.height);
-
-	for (int i = 0; i < 4; ++i)
-		if (object.contains(edges[i]))
-			return true;
-
-	return false;
 }
 
 void on_mouse
