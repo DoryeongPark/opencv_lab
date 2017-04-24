@@ -65,6 +65,7 @@ namespace tracking {
 		
 		int number = 1;
 		int overlap_point = 0;
+		int tracking_point = 0;
 
 	public:
 		
@@ -98,7 +99,7 @@ namespace tracking {
 	public:
 	
 		int get_counts();
-		void reflect(vector<Rect>& objects);
+		void reflect(Mat& current_frame, vector<Rect>& objects);
 		void display_objects(Mat& current_frame);
 
 	private:

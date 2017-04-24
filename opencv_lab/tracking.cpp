@@ -28,7 +28,7 @@ int TrackingObject::get_area() {
 
 }
 
-
+//NEED TO BE MODIFIED - IT DOESN'T COVER ALL CASES!
 bool TrackingObject::is_overlapped
 (
 	const Rect& current_object
@@ -58,6 +58,7 @@ void TrackingObject::update
 	this->object = object;
 	this->area = object.area();
 	this->reset();
+	++this->tracking_point;
 
 }
 
@@ -136,6 +137,7 @@ int TrackingObjectPool::get_counts() {
 
 void TrackingObjectPool::reflect
 (
+	Mat& current_frame, //Parameter for test
 	vector<Rect>& objects
 )
 {
@@ -170,21 +172,31 @@ void TrackingObjectPool::reflect
 		if (overlapped_indexes_size == 0) {
 			
 			pool.emplace_back(TrackingObject{ current_object });
+			cout << "New Object Inserted - [" << current_object.x  << " " << current_object.y << " " 
+				 << current_object.width << " " << current_object.height << "]" << endl;
+
+			//Testing new object
+			Mat showing_frame;
+			current_frame.copyTo(showing_frame);
+			rectangle(showing_frame, current_object, Scalar{ 0, 255, 0 });
+			imshow("New Object", showing_frame);
 
 		}
 		else if(overlapped_indexes_size == 1) {
 
 			//@@@ Execute it after loop @@@//
-			if (pool[overlapped_indexes[0]].get_overlap_point() >= 1){ 
+			if (pool[overlapped_indexes[0]].get_overlap_point() > 1){ 
 
 				pool[overlapped_indexes[0]].decrease_number();
 				auto&& another = TrackingObject{ current_object };
 				pool.emplace_back(another);
+				cout << "Updated - overlapped_indexes_size == 1, Overlap Point > 1" << endl;
 
 			}
 			else {
 
 				pool[overlapped_indexes[0]].update(current_object);
+				cout << "Updated - overlapped_indexes_size == 1, Overlap Point == 1" << endl;
 
 			}
 
@@ -217,6 +229,8 @@ void TrackingObjectPool::reflect
 			
 			for (auto& index : overlapped_indexes)
 				pool.erase(pool.begin() + index);
+
+			cout << "Object branched" << endl;
 	
 		}
 			

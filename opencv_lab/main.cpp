@@ -349,23 +349,40 @@ init:
 		}
 
 		//Test Code
-		for (int i = 0; i < contours_size; ++i) {
-			
-			for (int j = 0; j < contours_size; ++j) {
+		vector<int> overlapped_indexes;
+		overlapped_indexes.reserve(contours_size);
+		int overlapped_number = 0;
+
+		for (int i = 0; i < contours_size - 1; ++i) {
+			for (int j = i + 1; j < contours_size; ++j) {
+
+				if (is_overlapped(detected_objects[i], detected_objects[j])) {
+
+					int remove_index = (detected_objects[i].area() > 
+										detected_objects[j].area()) ? 
+										j : i;
+					
+					overlapped_indexes.emplace_back(remove_index);
+					++overlapped_number;
+					
+					if (overlapped_number == contours_size - 1)
+						goto complete_finding_overlap;
+				}
 				
-				if (i == j)
-					continue;
-
-				if (is_overlapped(detected_objects[i], detected_objects[j]))
-					cout << "중복 발생" << endl;
-
 			}
-			
 		}
+
+		complete_finding_overlap:
+
+		sort(overlapped_indexes.rbegin(), 
+			 overlapped_indexes.rend());
+			
+		for (auto& index : overlapped_indexes)
+			detected_objects.erase(detected_objects.begin() + index);
 
 		if (frame_number++ > 30) {
 
-			tracking_object_pool.reflect(detected_objects);
+			tracking_object_pool.reflect(cframe, detected_objects);
 			tracking_object_pool.display_objects(cframe);
 
 		}
