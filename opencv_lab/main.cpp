@@ -297,15 +297,15 @@ init:
 		absdiff(background, gray_cframe, binary);
 		threshold(binary, binary, 16, 255, THRESH_BINARY);
 
-		////DEBUG: Before erosion
-		/*imshow("Before Erosion", binary);
-		waitKey(10);*/
+		//DEBUG: Before erosion
+		imshow("Before Erosion", binary);
+		waitKey(10);
 		
 		morphologyEx(binary, binary, MORPH_OPEN, opener);
 
-		////DEBUG: Before dilation
-		/*imshow("Before Dilation", binary);
-		waitKey(10);*/
+		//DEBUG: Before dilation
+		imshow("Before Dilation", binary);
+		waitKey(10);
 
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
 		morphologyEx(binary, binary, MORPH_ERODE, opener);
@@ -392,8 +392,6 @@ init:
 
 		//Space key
 		if (ch == 32) {
-			//expand_object_roi(cframe_gray, binary, bounded_rects, 13);
-			//display_rects(cframe, binary, bounded_rects);
 			while ((ch = waitKey(10)) != 32 && ch != 27);
 			if (ch == 27) break;
 		}
@@ -403,8 +401,10 @@ init:
 			break;
 
 		imshow("Input", cframe);
-		//imshow("Background", background);
-		//imshow("Binary", binary);
+		imshow("Grayscale", gray_cframe);
+		imshow("Background", background);
+		imshow("Binary", binary);
+		
 		waitKey(10);
 
 	}

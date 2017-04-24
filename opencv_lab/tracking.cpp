@@ -28,7 +28,6 @@ int TrackingObject::get_area() {
 
 }
 
-//NEED TO BE MODIFIED - IT DOESN'T COVER ALL CASES!
 bool TrackingObject::is_overlapped
 (
 	Rect& current_object
@@ -170,7 +169,6 @@ void TrackingObjectPool::reflect
 
 				overlapped_indexes.emplace_back(overlapped_index);
 				tracking_object->increse_overlap_point();
-				tracking_object->increase_tracking_point();
 				
 			}
 
