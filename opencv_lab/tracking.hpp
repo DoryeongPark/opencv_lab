@@ -65,12 +65,13 @@ namespace tracking {
 		
 		int number = 1;
 		int overlap_point = 0;
+
 		int tracking_point = 0;
 
 	public:
 		
 		explicit TrackingObject(const Rect& rect);
-		bool is_overlapped(const Rect& object);
+		bool is_overlapped(Rect& object);
 		void update(Rect& object);
 		bool is_valid();
 		Rect& get_object();
@@ -83,7 +84,10 @@ namespace tracking {
 		int get_overlap_point();
 		void set_overlap_point(const int& _overlap_point);
 		void increse_overlap_point();
-		
+
+		int get_tracking_point();
+		void set_tracking_point(const int& _tracking_point);
+		void increase_tracking_point();
 	
 	};
 

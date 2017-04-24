@@ -31,19 +31,31 @@ int TrackingObject::get_area() {
 //NEED TO BE MODIFIED - IT DOESN'T COVER ALL CASES!
 bool TrackingObject::is_overlapped
 (
-	const Rect& current_object
+	Rect& current_object
 )
 {
+	Rect* big;
+	Rect* small;
 	
+	if (object.area() > current_object.area()) {
+		big = &object;
+		small = &current_object;
+	}
+	else {
+		big = &current_object;
+		small = &object;
+	}
+	 
+
 	Point edges[4];
 	
-	edges[0] = Point(current_object.x, current_object.y);
-	edges[1] = Point(current_object.x + current_object.width, current_object.y);
-	edges[2] = Point(current_object.x, current_object.y + current_object.height);
-	edges[3] = Point(current_object.x + current_object.width, current_object.y + current_object.height);
+	edges[0] = Point(small->x, small->y);
+	edges[1] = Point(small->x + small->width, small->y);
+	edges[2] = Point(small->x, small->y + small->height);
+	edges[3] = Point(small->x + small->width, small->y + small->height);
 
 	for (int i = 0; i < 4; ++i)
-		if (object.contains(edges[i]))
+		if (big->contains(edges[i]))
 			return true;
 
 	return false;
@@ -117,6 +129,27 @@ void TrackingObject::increse_overlap_point() {
 
 }
 
+
+
+int TrackingObject::get_tracking_point() {
+	
+	return tracking_point;
+	
+}
+
+void TrackingObject::set_tracking_point(const int& _tracking_point) {
+	
+	tracking_point = _tracking_point;
+
+}
+
+void TrackingObject::increase_tracking_point() {
+	
+	++tracking_point;
+
+}
+
+
 //==========================================================
 //
 //	TrackingObjectPool function definition
@@ -159,6 +192,7 @@ void TrackingObjectPool::reflect
 
 				overlapped_indexes.emplace_back(overlapped_index);
 				tracking_object->increse_overlap_point();
+				tracking_object->increase_tracking_point();
 				
 			}
 
@@ -172,8 +206,8 @@ void TrackingObjectPool::reflect
 		if (overlapped_indexes_size == 0) {
 			
 			pool.emplace_back(TrackingObject{ current_object });
-			cout << "New Object Inserted - [" << current_object.x  << " " << current_object.y << " " 
-				 << current_object.width << " " << current_object.height << "]" << endl;
+			/*cout << "New Object Inserted - [" << current_object.x  << " " << current_object.y << " " 
+				 << current_object.width << " " << current_object.height << "]" << endl;*/
 
 			//Testing new object
 			Mat showing_frame;
@@ -190,25 +224,29 @@ void TrackingObjectPool::reflect
 				pool[overlapped_indexes[0]].decrease_number();
 				auto&& another = TrackingObject{ current_object };
 				pool.emplace_back(another);
-				cout << "Updated - overlapped_indexes_size == 1, Overlap Point > 1" << endl;
+				/*cout << "Updated - overlapped_indexes_size == 1, Overlap Point > 1" << endl;*/
 
 			}
 			else {
 
 				pool[overlapped_indexes[0]].update(current_object);
-				cout << "Updated - overlapped_indexes_size == 1, Overlap Point == 1" << endl;
+				/*cout << "Updated - overlapped_indexes_size == 1, Overlap Point == 1" << endl;*/
 
 			}
 
 		}
 		else {
-
+			
 			int total_area = 0;
 			int number = 0;
 
 			//Get total area size
-			for (auto& index : overlapped_indexes) 
+			for (auto& index : overlapped_indexes) {
+				if(pool[index].get_tracking_point() < 5)
+					
+
 				total_area += pool[index].get_area();
+			}
 			
 			//Regard it as collsion of people
 			if (total_area > current_object.area())
@@ -241,9 +279,12 @@ void TrackingObjectPool::reflect
 			  iter != pool.end();) {
 
 		if (!iter->is_valid()) {
-
+			
+			Rect* erased_noise = &(iter->get_object());
+			cout << "Detect noise - [" << erased_noise->x << " " << erased_noise->y 
+				 << " " << erased_noise->width << " " << erased_noise->height 
+				 << "]" << endl;
 			iter = pool.erase(iter);
-			cout << "ERASE ==" << endl;
 			continue;
 
 		}
