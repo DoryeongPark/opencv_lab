@@ -61,21 +61,24 @@ namespace tracking {
 	{
 
 		Rect object;
-		int area;
-		
+		Rect* candidate = nullptr;
+
 		int number = 1;
 		int overlap_point = 0;
-
 		int tracking_point = 0;
 
 	public:
 		
 		explicit TrackingObject(const Rect& rect);
+		
 		bool is_overlapped(Rect& object);
-		void update(Rect& object);
 		bool is_valid();
+		
+		void update(Rect& object);
+		void commit();
+		
 		Rect& get_object();
-		int get_area();
+		
 
 		int get_number();
 		void set_number(const int& _number);

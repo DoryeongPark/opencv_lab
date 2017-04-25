@@ -252,7 +252,7 @@ init:
 	Mat background{ HEIGHT, WIDTH, CV_8UC1 };
 	Mat binary;
 	Mat opener = getStructuringElement(MORPH_RECT, Size{ 3, 3 }, Point{ 1, 1 });
-	Mat closer = getStructuringElement(MORPH_ELLIPSE, Size{ 9, 11 }, Point{ 4, 5 });
+	Mat closer = getStructuringElement(MORPH_ELLIPSE, Size{ 7, 9 }, Point{ 3, 4 });
 	
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
@@ -298,18 +298,17 @@ init:
 		threshold(binary, binary, 16, 255, THRESH_BINARY);
 
 		//DEBUG: Before erosion
-		imshow("Before Erosion", binary);
-		waitKey(10);
+		/*imshow("Before Erosion", binary);
+		waitKey(10);*/
 		
 		morphologyEx(binary, binary, MORPH_OPEN, opener);
 
 		//DEBUG: Before dilation
-		imshow("Before Dilation", binary);
-		waitKey(10);
+		/*imshow("Before Dilation", binary);
+		waitKey(10);*/
 
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
-		morphologyEx(binary, binary, MORPH_ERODE, opener);
-
+		
 		//Accumulate current frame to background frame
 		accumulateWeighted(gray_cframe, accumulator, 0.001, mask);
 		convertScaleAbs(accumulator, background);
@@ -401,9 +400,9 @@ init:
 			break;
 
 		imshow("Input", cframe);
-		imshow("Grayscale", gray_cframe);
+		/*imshow("Grayscale", gray_cframe);
 		imshow("Background", background);
-		imshow("Binary", binary);
+		imshow("Binary", binary);*/
 		
 		waitKey(10);
 

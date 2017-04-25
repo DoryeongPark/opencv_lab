@@ -12,19 +12,12 @@ TrackingObject::TrackingObject(const Rect& object){
 
 	this->reset();
 	this->object = object;
-	area = object.area();
 
 }
 
 Rect& TrackingObject::get_object() {
 
 	return object;
-
-}
-
-int TrackingObject::get_area() {
-
-	return object.area();
 
 }
 
@@ -44,11 +37,20 @@ void TrackingObject::update
 )
 {
 
-	this->object = object;
-	this->area = object.area();
+	this->candidate = &object;
 	this->reset();
 	++this->tracking_point;
 
+}
+
+void TrackingObject::commit() {
+
+	if (candidate != nullptr) {
+
+		object = *candidate;
+		candidate = nullptr;
+
+	}
 }
 
 bool TrackingObject::is_valid()
@@ -175,7 +177,7 @@ void TrackingObjectPool::reflect
 			++overlapped_index;
 
 		}
-				
+		
 		auto overlapped_indexes_size = overlapped_indexes.size();
 		
 		//Regard it as new object
@@ -194,7 +196,7 @@ void TrackingObjectPool::reflect
 		}
 		else if(overlapped_indexes_size == 1) {
 
-			//@@@ Execute it after loop @@@//
+			//왜 호출 안되는지 체크하기
 			if (pool[overlapped_indexes[0]].get_overlap_point() > 1){ 
 
 				pool[overlapped_indexes[0]].decrease_number();
@@ -225,7 +227,7 @@ void TrackingObjectPool::reflect
 				total_number += pool[index].get_number();
 				tracking_point = pool[index].get_tracking_point();
 
-				if (tracking_point < 15) {
+				if (tracking_point < 25) {
 					
 					is_merged_with_noise = true;
 					break;
@@ -242,6 +244,7 @@ void TrackingObjectPool::reflect
 			else
 				number = total_number;
 			
+			cout << "__" << total_number << "__" << endl;
 			TrackingObject tracking_object{ current_object };
 			tracking_object.set_number(number);
 			tracking_object.set_tracking_point(tracking_point);
@@ -263,6 +266,8 @@ void TrackingObjectPool::reflect
 	//Remove object which has long duration	
 	for (auto iter = pool.begin();
 			  iter != pool.end();) {
+		
+		iter->commit();
 
 		if (!iter->is_valid()) {
 			
