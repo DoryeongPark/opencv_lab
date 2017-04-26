@@ -135,12 +135,13 @@ void TrackingObject::increase_tracking_point() {
 //
 //==========================================================
 
-int TrackingObjectPool::get_counts() {
+int TrackingObjectPool::get_object_count() {
 
 	int result = 0;
 	
-	for (auto& tracking_objects : pool)
-		result += tracking_objects.get_number();
+	for (auto& tracking_object : pool)
+		if(tracking_object.get_tracking_point() > 100)
+			result += tracking_object.get_number();
 
 	return result;
 
@@ -244,7 +245,6 @@ void TrackingObjectPool::reflect
 			else
 				number = total_number;
 			
-			cout << "__" << total_number << "__" << endl;
 			TrackingObject tracking_object{ current_object };
 			tracking_object.set_number(number);
 			tracking_object.set_tracking_point(tracking_point);
