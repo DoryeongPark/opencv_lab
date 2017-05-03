@@ -339,7 +339,7 @@ init:
 		}
 
 		//Test Code
-		vector<int> overlapped_indexes;
+		/*vector<int> overlapped_indexes;
 		overlapped_indexes.reserve(contours_size);
 		int overlapped_number = 0;
 
@@ -367,18 +367,20 @@ init:
 		sort(overlapped_indexes.rbegin(), 
 			 overlapped_indexes.rend());
 			
-		for (auto& index : overlapped_indexes)
+		for (auto& index : overlapped_indexes) {
 			detected_objects.erase(detected_objects.begin() + index);
+		}*/
+		
+		/*tracking_object_pool.reflect(detected_objects);
+		tracking_object_pool.display_objects(cframe);*/
 
-		if (frame_number++ > 30) {
+		if (++frame_number % 30 == 0) {
 
-			tracking_object_pool.reflect(cframe, detected_objects);
-			tracking_object_pool.display_objects(cframe);
-
+			cout << tracking_object_pool.get_object_count() << endl;
+			cout << "----------------" << endl;
+		
 		}
 
-		cout << tracking_object_pool.get_counts() << endl;
-		
 		char ch;
 		ch = waitKey(10);
 

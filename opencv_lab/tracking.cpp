@@ -140,7 +140,7 @@ int TrackingObjectPool::get_object_count() {
 	int result = 0;
 	
 	for (auto& tracking_object : pool)
-		if(tracking_object.get_tracking_point() > 100)
+		if(tracking_object.get_tracking_point() > 30)
 			result += tracking_object.get_number();
 
 	return result;
@@ -150,7 +150,6 @@ int TrackingObjectPool::get_object_count() {
 
 void TrackingObjectPool::reflect
 (
-	Mat& current_frame, //Parameter for test
 	vector<Rect>& objects
 )
 {
@@ -185,27 +184,18 @@ void TrackingObjectPool::reflect
 		if (overlapped_indexes_size == 0) {
 			
 			pool.emplace_back(TrackingObject{ current_object });
-			/*cout << "New Object Inserted - [" << current_object.x  << " " << current_object.y << " " 
-				 << current_object.width << " " << current_object.height << "]" << endl;*/
-
-			//Showing new object
-			Mat showing_frame;
-			current_frame.copyTo(showing_frame);
-			rectangle(showing_frame, current_object, Scalar{ 0, 255, 0 });
-			imshow("New Object", showing_frame);
 
 		}
 		else if(overlapped_indexes_size == 1) {
 
-			//왜 호출 안되는지 체크하기
+
 			if (pool[overlapped_indexes[0]].get_overlap_point() > 1){ 
 
 				pool[overlapped_indexes[0]].decrease_number();
 				auto&& another = TrackingObject{ current_object };
 				another.set_tracking_point(pool[overlapped_indexes[0]].get_tracking_point());
 				pool.emplace_back(another);
-				cout << "Object branched" << endl;
-
+				
 			}
 			else {
 
@@ -216,7 +206,8 @@ void TrackingObjectPool::reflect
 		}
 		else {
 			
-			int tracking_point = 0;
+			int current_tracking_point = 0;
+			int max_tracking_point = 0;
 			int total_number = 0;
 
 			int number = 0;
@@ -226,9 +217,12 @@ void TrackingObjectPool::reflect
 			for (auto& index : overlapped_indexes) {
 
 				total_number += pool[index].get_number();
-				tracking_point = pool[index].get_tracking_point();
-
-				if (tracking_point < 25) {
+				current_tracking_point = pool[index].get_tracking_point();
+				
+				if (current_tracking_point > max_tracking_point)
+					max_tracking_point = current_tracking_point;
+				
+				if (current_tracking_point < 50) {
 					
 					is_merged_with_noise = true;
 					break;
@@ -247,17 +241,16 @@ void TrackingObjectPool::reflect
 			
 			TrackingObject tracking_object{ current_object };
 			tracking_object.set_number(number);
-			tracking_object.set_tracking_point(tracking_point);
+			tracking_object.set_tracking_point(max_tracking_point);
 			pool.emplace_back(tracking_object);
 
 			//Erase overlapped tracking objects
 			sort(overlapped_indexes.rbegin(), 
 				 overlapped_indexes.rend());
 			
-			for (auto& index : overlapped_indexes)
+			for (auto& index : overlapped_indexes) {
 				pool.erase(pool.begin() + index);
-
-			cout << "Object merged" << endl;
+			}
 	
 		}
 			
@@ -272,9 +265,6 @@ void TrackingObjectPool::reflect
 		if (!iter->is_valid()) {
 			
 			Rect* erased_noise = &(iter->get_object());
-			cout << "Detect noise - [" << erased_noise->x << " " << erased_noise->y 
-				 << " " << erased_noise->width << " " << erased_noise->height 
-				 << "]" << endl;
 			iter = pool.erase(iter);
 			continue;
 

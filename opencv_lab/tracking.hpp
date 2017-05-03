@@ -105,8 +105,8 @@ namespace tracking {
 
 	public:
 	
-		int get_counts();
-		void reflect(Mat& current_frame, vector<Rect>& objects);
+		int get_object_count();
+		void reflect(vector<Rect>& objects);
 		void display_objects(Mat& current_frame);
 
 	private:
