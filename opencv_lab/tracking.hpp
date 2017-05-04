@@ -59,7 +59,7 @@ namespace tracking {
 	*/
 	class TrackingObject : stop_watch<system_clock>
 	{
-
+		
 		Rect object;
 		Rect* candidate = nullptr;
 
@@ -70,7 +70,7 @@ namespace tracking {
 	public:
 		
 		explicit TrackingObject(const Rect& rect);
-		
+
 		bool is_overlapped(Rect& object);
 		bool is_valid();
 		
@@ -79,7 +79,6 @@ namespace tracking {
 		
 		Rect& get_object();
 		
-
 		int get_number();
 		void set_number(const int& _number);
 		void decrease_number();
@@ -103,9 +102,14 @@ namespace tracking {
 
 		vector<TrackingObject> pool;
 
+		int count_standard = 50;
+
 	public:
 	
 		int get_object_count();
+
+		void set_count_standard(const int& _count_standard_point);
+
 		void reflect(vector<Rect>& objects);
 		void display_objects(Mat& current_frame);
 

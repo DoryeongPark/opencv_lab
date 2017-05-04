@@ -15,6 +15,7 @@ TrackingObject::TrackingObject(const Rect& object){
 
 }
 
+
 Rect& TrackingObject::get_object() {
 
 	return object;
@@ -95,7 +96,11 @@ int TrackingObject::get_overlap_point() {
 
 }
 
-void TrackingObject::set_overlap_point(const int& _overlap_point) {
+void TrackingObject::set_overlap_point
+(
+	const int& _overlap_point
+) 
+{
 	
 	overlap_point = _overlap_point;
 
@@ -109,14 +114,17 @@ void TrackingObject::increse_overlap_point() {
 }
 
 
-
 int TrackingObject::get_tracking_point() {
 	
 	return tracking_point;
 	
 }
 
-void TrackingObject::set_tracking_point(const int& _tracking_point) {
+void TrackingObject::set_tracking_point
+(
+	const int& _tracking_point
+) 
+{
 	
 	tracking_point = _tracking_point;
 
@@ -140,10 +148,20 @@ int TrackingObjectPool::get_object_count() {
 	int result = 0;
 	
 	for (auto& tracking_object : pool)
-		if(tracking_object.get_tracking_point() > 30)
+		if(tracking_object.get_tracking_point() > count_standard)
 			result += tracking_object.get_number();
 
 	return result;
+
+}
+
+void TrackingObjectPool::set_count_standard
+(
+	const int& _count_standard_point
+)
+{
+
+	this->count_standard = _count_standard_point;
 
 }
 

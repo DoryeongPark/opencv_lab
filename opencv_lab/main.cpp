@@ -32,7 +32,7 @@ using namespace cv;
 using namespace tracking;
 
 class Cropper {
-private:
+
 	int first_x = -1;
 	int first_y = -1;
 	int second_x = -1;
@@ -310,7 +310,9 @@ init:
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
 		
 		//Accumulate current frame to background frame
-		accumulateWeighted(gray_cframe, accumulator, 0.001, mask);
+		if (frame_number == 30) 
+			accumulateWeighted(gray_cframe, accumulator, 0.004, mask);
+			
 		convertScaleAbs(accumulator, background);
 
 		findContours
@@ -338,46 +340,15 @@ init:
 
 		}
 
-		//Test Code
-		/*vector<int> overlapped_indexes;
-		overlapped_indexes.reserve(contours_size);
-		int overlapped_number = 0;
-
-		for (int i = 0; i < contours_size - 1; ++i) {
-			for (int j = i + 1; j < contours_size; ++j) {
-
-				if (is_overlapped(detected_objects[i], detected_objects[j])) {
-
-					int remove_index = (detected_objects[i].area() > 
-										detected_objects[j].area()) ? 
-										j : i;
-					
-					overlapped_indexes.emplace_back(remove_index);
-					++overlapped_number;
-					
-					if (overlapped_number == contours_size - 1)
-						goto complete_finding_overlap;
-				}
-				
-			}
-		}
-
-		complete_finding_overlap:
-
-		sort(overlapped_indexes.rbegin(), 
-			 overlapped_indexes.rend());
-			
-		for (auto& index : overlapped_indexes) {
-			detected_objects.erase(detected_objects.begin() + index);
-		}*/
 		
-		/*tracking_object_pool.reflect(detected_objects);
-		tracking_object_pool.display_objects(cframe);*/
+		tracking_object_pool.reflect(detected_objects);
+		tracking_object_pool.display_objects(cframe);
 
-		if (++frame_number % 30 == 0) {
+		if (++frame_number == 30) {
 
 			cout << tracking_object_pool.get_object_count() << endl;
 			cout << "----------------" << endl;
+			frame_number = 0;
 		
 		}
 
@@ -403,8 +374,8 @@ init:
 
 		imshow("Input", cframe);
 		/*imshow("Grayscale", gray_cframe);
-		imshow("Background", background);
-		imshow("Binary", binary);*/
+		imshow("Background", background);*/
+		imshow("Binary", binary);
 		
 		waitKey(10);
 
