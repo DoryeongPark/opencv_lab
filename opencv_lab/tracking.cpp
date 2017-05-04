@@ -65,7 +65,7 @@ bool TrackingObject::is_valid()
 	//========================================
 
 	//Here will be variable cab be changed by frame_rate 
-	return (duration_milliseconds.count()) < 800;
+	return (duration_milliseconds.count()) < 1000;
 
 }
 
@@ -240,7 +240,7 @@ void TrackingObjectPool::reflect
 				if (current_tracking_point > max_tracking_point)
 					max_tracking_point = current_tracking_point;
 				
-				if (current_tracking_point < 50) {
+				if (current_tracking_point < count_standard) {
 					
 					is_merged_with_noise = true;
 					break;

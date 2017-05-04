@@ -280,6 +280,7 @@ init:
 
 	//Initialize TrackingObjectPool
 	TrackingObjectPool tracking_object_pool;
+	tracking_object_pool.set_count_standard(50);
 
 	//Playing video file
 	while (true) {
