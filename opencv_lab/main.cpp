@@ -311,8 +311,7 @@ init:
 		morphologyEx(binary, binary, MORPH_DILATE, closer);
 		
 		//Accumulate current frame to background frame
-		if (frame_number == 30) 
-			accumulateWeighted(gray_cframe, accumulator, 0.004, mask);
+		accumulateWeighted(gray_cframe, accumulator, 0.004, mask);
 			
 		convertScaleAbs(accumulator, background);
 
@@ -341,7 +340,7 @@ init:
 
 		}
 
-		
+		//Reflect current objects 
 		tracking_object_pool.reflect(detected_objects);
 		tracking_object_pool.display_objects(cframe);
 

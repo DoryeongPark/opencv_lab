@@ -240,12 +240,8 @@ void TrackingObjectPool::reflect
 				if (current_tracking_point > max_tracking_point)
 					max_tracking_point = current_tracking_point;
 				
-				if (current_tracking_point < count_standard) {
-					
+				if (current_tracking_point < count_standard) 
 					is_merged_with_noise = true;
-					break;
-
-				}
 					
 			}
 			
@@ -308,13 +304,20 @@ void TrackingObjectPool::display_objects
 	current_frame.copyTo(showing_frame);
 
 	for (auto& object : pool) {
-		rectangle(showing_frame, object.get_object(), Scalar{ 0, 0, 255 });
+
+		if (object.get_tracking_point() >= count_standard) 
+			rectangle(showing_frame, object.get_object(), Scalar{ 255, 0, 0 });
+		else 
+			rectangle(showing_frame, object.get_object(), Scalar{ 0, 0, 255 });
+		
+
 		putText(showing_frame, to_string(object.get_number()), 
 			Point(object.get_object().x + object.get_object().width / 2, 
 				  object.get_object().y + object.get_object().height / 3), 3, 0.4, Scalar{ 255, 0, 0 });
 		putText(showing_frame, to_string(object.get_tracking_point()),
 			Point(object.get_object().x + object.get_object().width / 2,
 				object.get_object().y + object.get_object().height / 3 + 10), 3, 0.4, Scalar{ 0, 255, 0 });
+
 	}
 		
 			
