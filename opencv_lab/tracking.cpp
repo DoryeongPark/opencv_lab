@@ -65,7 +65,7 @@ bool TrackingObject::is_valid()
 	//========================================
 
 	//Here will be variable cab be changed by frame_rate 
-	return (duration_milliseconds.count()) < 1000;
+	return (duration_milliseconds.count()) < 1000 && number > 0;
 
 }
 
@@ -148,7 +148,8 @@ int TrackingObjectPool::get_object_count() {
 	int result = 0;
 	
 	for (auto& tracking_object : pool)
-		if(tracking_object.get_tracking_point() > count_standard)
+		if(tracking_object.get_tracking_point() > count_standard &&
+		   tracking_object.get_number() > 0)
 			result += tracking_object.get_number();
 
 	return result;
@@ -205,12 +206,11 @@ void TrackingObjectPool::reflect
 
 		}
 		else if(overlapped_indexes_size == 1) {
-
-
+			//Dividing routine
 			if (pool[overlapped_indexes[0]].get_overlap_point() > 1){ 
 
 				pool[overlapped_indexes[0]].decrease_number();
-				auto&& another = TrackingObject{ current_object };
+				auto another = TrackingObject{ current_object };
 				another.set_tracking_point(pool[overlapped_indexes[0]].get_tracking_point());
 				pool.emplace_back(another);
 				
@@ -320,7 +320,7 @@ void TrackingObjectPool::display_objects
 
 	}
 		
-			
+	putText(showing_frame, "COUNT: " + to_string(get_object_count()), Point{ 10, 20 }, 4, 0.6, Scalar{ 255, 255, 0 });
 	imshow("Tracking objects", showing_frame);
 
 }
