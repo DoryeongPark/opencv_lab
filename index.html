@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/3/w3.css">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+  <script src="js/jquery-3.0.0.min.js"></script>
+  <script src="js/menu_action.js"></script>
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script> -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+  <script type="text/javascript" src="cordova.js"></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAfkmO6cma9obDejE7ugQhNaYgnWOnz-O4&callback=initMap"></script>
+
+  <title>RSMS</title>
+</head>
+
+<body>
+  <div id="Header">내 주변 시설</div>
+  <div id="Content"></div>
+
+  <div class="icon-bar">
+    <div class="tab active" id="tab_nearby" href="#">
+      <img class="tab-img" id="nearby-img" src="img/nearby_active.png">
+      <span class="name" id="nearby" style="color: #f7b400">내 주변</span>
+    </div>
+    <div class="tab" id="tab_community" href="#">
+      <img class="tab-img" id="community-img" src="img/community_inactive.png">
+      <span class="name" id="community">지역별</span>
+    </div>
+    <div class="tab" id="tab_category" href="#">
+      <img class="tab-img" id="category-img" src="img/category_inactive.png">
+      <span class="name" id="category">카테고리</span>
+    </div>
+    <div class="tab" id="tab_users" href="#">
+      <img class="tab-img" id="users-img" src="img/users_inactive.png">
+      <span class="name" id="users">예약현황</span>
+    </div>
+  </div>
+</body>
