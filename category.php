@@ -128,7 +128,7 @@
 
   /* 각 카테고리별 아이템의 클릭이벤트 등록 */
   $('.category-button-left').on('click', function(e) {
-    alert(e.target.id); // 이걸 가지고 php로...
+    //alert(e.target.id); // 이걸 가지고 php로...
 
     var category = document.getElementById('category-list');
     category.style.padding = '0px';
@@ -157,7 +157,7 @@
 
   /* 각 카테고리별 아이템의 클릭이벤트 등록 */
   $('.category-button-right').on('click', function(e) {
-    alert(e.target.id); // 이걸 가지고 php로...
+    //alert(e.target.id); // 이걸 가지고 php로...
 
     category.style.padding = '0px';
     category.style.paddingTop = '0px';

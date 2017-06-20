@@ -84,7 +84,7 @@
 
   /* 각 지역 아이템의 클릭이벤트 등록 */
   $('.item').on('click', function(e) {
-    alert(e.target.id); // 이걸 가지고 php로...
+    //alert(e.target.id); // 이걸 가지고 php로...
 
     /* 사용자가 선택한 지역의 정보를 localStorage에 저장하여 다음 페이지에 전달 */
     var dataString = e.target.id;

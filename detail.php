@@ -229,7 +229,7 @@
           </select></span>
         </div>
 
-        <button class="w3-button w3-white w3-border w3-border-blue w3-round-large" data-dismiss="modal" id="confirmButton" onclick="confirmReserve()">예약하기</button>
+        <button class="w3-button w3-white w3-border w3-border-blue w3-round-large" id="confirmButton" onclick="confirmReserve()">예약하기</button>
       </div>
     </div>
     <div id="line_chart" style="min-width: 310px; height: 200px; margin: 0 auto"></div>
@@ -291,6 +291,7 @@
     console.log(JSON.parse(reserveId));
 
     localStorage.setItem('reserveNum', JSON.parse(reserveId));
+    document.getElementById('modal').style.display='none';
   }
 
   function readData() {
@@ -465,7 +466,7 @@
 
   $('#back-button-detail').on('click', function(e) {
     /* 이전화면으로 돌아가는 버튼을 클릭했을 때에 발생하는 이벤트 */
-    alert('back-botton-detail click');
+    //alert('back-botton-detail click');
 
     $.ajax({
       type : 'GET',

@@ -194,7 +194,7 @@
   $('#back-button').on('click', function() {
     $('#back-button').unbind('click');
     /* 사용자가 back-button을 눌렀을 시, 이전 화면으로 이동하는 이벤트 */
-    alert('back-botton click');
+    //alert('back-botton click');
 
     if(previous == 'community') // 이전 화면이 지역별 메뉴
     {
