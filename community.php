@@ -40,17 +40,7 @@
 
 <body>
   <div class="community-list" id="community-list">
-    <!-- <li>
-      <div class="item" name="seoul">
-        <img name="seoul">
-        서울
-      </div>
-    </li>
-    <li>
-      <div class="item" id="gyeonggi-do">
-        경기
-      </div>
-    </li> -->
+
   </div>
 
   <script type="text/javascript">

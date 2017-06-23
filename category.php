@@ -74,48 +74,6 @@
   console.log(name);
   console.log(id);
 
-  //addCategory();
-
-  // function addCategory() {
-  //   var category = document.getElementById('category-list');
-  //   var i;
-  //
-  //   for(i=0; i<3; i+2)
-  //   {
-  //     var row = document.createElement('div');
-  //     row.class = 'row';
-  //
-  //     var col_left = document.createElement('div');
-  //     col_left.class = 'col-xs-6';
-  //
-  //     var imgUrl_left = 'url(img/' + id[i] + '.png)';
-  //     var button_left = document.createElement('div');
-  //     button_left.class = "category-button-left";
-  //     button_left.id = name[i];
-  //     button_left.style.backgroundImage = imgUrl_left;
-  //     button_left.style.backgroundRepeat = 'no-repeat';
-  //
-  //     col_left.appendChild(button_left);
-  //
-  //     var col_right = document.createElement('div');
-  //     col_right.class = 'col-xs-6';
-  //
-  //     var imgUrl_right = 'url(img/' + id[i+1] + '.png)';
-  //     var button_right = document.createElement('div');
-  //     button_right.class = "category-button-right";
-  //     button_right.id = name[i+1];
-  //     button_right.style.backgroundImage = imgUrl_right;
-  //     button_right.style.backgroundRepeat = 'no-repeat';
-  //
-  //     col_right.appendChild(button_right);
-  //
-  //     row.appendChild(col_left);
-  //     row.appendChild(col_right);
-  //
-  //     category.appendChild(row);
-  //   }
-  // } // addCategory
-
   function addBack() {
     /* back button 추가용 */
     var back = document.createElement('img');
@@ -157,7 +115,6 @@
 
   /* 각 카테고리별 아이템의 클릭이벤트 등록 */
   $('.category-button-right').on('click', function(e) {
-    //alert(e.target.id); // 이걸 가지고 php로...
 
     category.style.padding = '0px';
     category.style.paddingTop = '0px';

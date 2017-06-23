@@ -276,7 +276,7 @@
 
     var reserveId = $.ajax({
       type: 'POST',
-      url: 'http://localhost/database/reserveConfirm.php',
+      url: 'http://rsms.dothome.co.kr/info.php/',
       data: { user : user, day : weekDay, id : stadium, time : todayFormat, start : time, hour : duration  },
       crossDomain: true,
       cache: false,
@@ -301,7 +301,7 @@
 
     stadium_info = $.ajax({
       type: 'POST',
-      url: 'http://localhost/database/readInfo.php',
+      url: 'http://rsms.dothome.co.kr/readInfo.php/',
       data: { stadium : number },
       crossDomain: true,
       cache: false,
@@ -318,7 +318,7 @@
 
     stadium_reserve = $.ajax({
       type: 'POST',
-      url: 'http://localhost/database/readReservation.php',
+      url: 'http://rsms.dothome.co.kr/reservation.php/',
       data: { stadium: number },
       crossDomain: true,
       cache: false,
